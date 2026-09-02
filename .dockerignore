@@ -8,3 +8,8 @@
 **/*.log
 .husky/_
 web/src/typed-router.d.ts
+**/__pycache__
+**/.venv
+**/.ruff_cache
+**/.mypy_cache
+**/.pytest_cache

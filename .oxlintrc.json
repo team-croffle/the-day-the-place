@@ -17,6 +17,7 @@
   },
   "ignorePatterns": [
     "**/node_modules/**",
+    "collector/.venv/**",
     "**/dist/**",
     "**/coverage/**",
     "**/*.d.ts",

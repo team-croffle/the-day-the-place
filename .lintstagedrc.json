@@ -1,4 +1,8 @@
 {
   "*.{js,mjs,cjs,jsx,ts,mts,cts,tsx,vue}": ["oxlint --fix", "oxfmt"],
-  "*.{json,jsonc,json5,css,md,yaml,yml,html}": ["oxfmt"]
+  "*.{json,jsonc,json5,css,md,yaml,yml,html}": ["oxfmt"],
+  "collector/**/*.py": [
+    "uv run --directory collector --frozen ruff check --fix",
+    "uv run --directory collector --frozen ruff format"
+  ]
 }

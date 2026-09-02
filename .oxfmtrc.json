@@ -23,6 +23,9 @@
   },
   "ignorePatterns": [
     "**/node_modules/**",
+    "collector/uv.lock",
+    "collector/pyproject.toml",
+    "collector/.venv/**",
     "**/dist/**",
     "**/coverage/**",
     "**/*.d.ts",

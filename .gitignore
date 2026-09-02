@@ -13,6 +13,16 @@ web/typed-router.d.ts
 
 # tests
 coverage/
+.pytest_cache/
+htmlcov/
+.coverage
+
+# python
+__pycache__/
+*.py[cod]
+.venv/
+.ruff_cache/
+.mypy_cache/
 
 # env
 .env
