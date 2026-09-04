@@ -1,7 +1,7 @@
 # 그 날, 그 곳
 
-역사 관광 장소(박물관·유적지) 정보와 특별전을 한 곳에서 보여 주는 플랫폼.
-장소는 TourAPI·국가유산청 오픈API를 실시간으로 조회하고, 특별전만 우리 DB에 저장한다.
+역사 관광 장소(박물관·유적지) 정보와 특별전 현황을 한 곳에서 보여 주는 플랫폼.
+장소는 TourAPI·국가유산청 오픈API를 실시간으로 조회하고, 특별전만 DB에 저장한다.
 
 ## 구조
 
@@ -23,13 +23,13 @@
 
 ## 사전 준비
 
-| 도구 | 버전 | 비고 |
-| --- | --- | --- |
-| Node.js | 22.12+ | |
-| pnpm | 11 | `corepack enable` 이면 `packageManager` 필드 버전이 자동 사용됨 |
-| uv | 0.12+ | collector 전용. https://docs.astral.sh/uv/ |
-| Docker | compose v2 | 로컬 Postgres 용 |
-| Python | 3.13 | uv 가 자동으로 받으므로 직접 설치할 필요 없음 |
+| 도구    | 버전       | 비고                                                            |
+| ------- | ---------- | --------------------------------------------------------------- |
+| Node.js | 22.12+     |                                                                 |
+| pnpm    | 11         | `corepack enable` 이면 `packageManager` 필드 버전이 자동 사용됨 |
+| uv      | 0.12+      | collector 전용. https://docs.astral.sh/uv/                      |
+| Docker  | compose v2 | 로컬 Postgres 용                                                |
+| Python  | 3.13       | uv 가 자동으로 받으므로 직접 설치할 필요 없음                   |
 
 ## 시작하기
 
@@ -66,20 +66,20 @@ uv run python -m collector
 
 모두 리포지토리 루트에서 실행한다.
 
-| 명령 | 설명 |
-| --- | --- |
-| `pnpm dev` / `dev:server` / `dev:web` | 개발 서버 |
-| `pnpm build` | server → web 순서로 프로덕션 빌드 |
-| `pnpm typecheck` / `typecheck:py` | tsc / mypy |
-| `pnpm test` / `test:py` | jest / pytest |
-| `pnpm lint` / `lint:fix` / `lint:py` / `lint:py:fix` | oxlint / ruff |
-| `pnpm format` / `format:check` / `format:py` | oxfmt / ruff format |
-| `pnpm db:generate` | 스키마 변경 → 마이그레이션 SQL 생성 (`server/drizzle/`) |
-| `pnpm db:migrate` | 마이그레이션 적용 |
-| `pnpm db:push` | 마이그레이션 없이 스키마 직접 반영 (로컬 전용) |
-| `pnpm db:studio` | Drizzle Studio |
-| `pnpm docker:dev` / `docker:dev:down` | 로컬 Postgres + Adminer |
-| `pnpm docker:prod` | Nest 이미지 빌드 + Postgres 와 함께 기동 |
+| 명령                                                 | 설명                                                    |
+| ---------------------------------------------------- | ------------------------------------------------------- |
+| `pnpm dev` / `dev:server` / `dev:web`                | 개발 서버                                               |
+| `pnpm build`                                         | server → web 순서로 프로덕션 빌드                       |
+| `pnpm typecheck` / `typecheck:py`                    | tsc / mypy                                              |
+| `pnpm test` / `test:py`                              | jest / pytest                                           |
+| `pnpm lint` / `lint:fix` / `lint:py` / `lint:py:fix` | oxlint / ruff                                           |
+| `pnpm format` / `format:check` / `format:py`         | oxfmt / ruff format                                     |
+| `pnpm db:generate`                                   | 스키마 변경 → 마이그레이션 SQL 생성 (`server/drizzle/`) |
+| `pnpm db:migrate`                                    | 마이그레이션 적용                                       |
+| `pnpm db:push`                                       | 마이그레이션 없이 스키마 직접 반영 (로컬 전용)          |
+| `pnpm db:studio`                                     | Drizzle Studio                                          |
+| `pnpm docker:dev` / `docker:dev:down`                | 로컬 Postgres + Adminer                                 |
+| `pnpm docker:prod`                                   | Nest 이미지 빌드 + Postgres 와 함께 기동                |
 
 ## 코드 규칙
 
@@ -91,11 +91,11 @@ uv run python -m collector
 
 ## 배포 (요약)
 
-| 프로세스 | 어디에 | 비고 |
-| --- | --- | --- |
-| web (정적) | Netlify 또는 Docker nginx | 미정 |
-| server (API + SSE) | Docker 한 대 (`docker/docker-compose.yaml`) | SSE 때문에 서버리스 불가, 1대 고정 |
-| postgres | 같은 compose | |
-| collector | Modal (`modal.Cron`) | 안 되면 GCP Cloud Run Job + Cloud Scheduler |
+| 프로세스           | 어디에                                      | 비고                                        |
+| ------------------ | ------------------------------------------- | ------------------------------------------- |
+| web (정적)         | Netlify 또는 Docker nginx                   | 미정                                        |
+| server (API + SSE) | Docker 한 대 (`docker/docker-compose.yaml`) | SSE 때문에 서버리스 불가, 1대 고정          |
+| postgres           | 같은 compose                                |                                             |
+| collector          | Modal (`modal.Cron`)                        | 안 되면 GCP Cloud Run Job + Cloud Scheduler |
 
 Redis 는 쓰지 않는다. 지도 원천 호출은 디바운스·bbox 로 줄이고, 댓글 초안은 브라우저 localStorage 에 둔다.
