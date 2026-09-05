@@ -39,9 +39,7 @@ git clone <repo> && cd nest-vue
 corepack enable
 pnpm install                      # 워크스페이스 설치 + husky 훅 등록
 
-cp server/.env.example server/.env
-cp web/.env.example web/.env      # 필요할 때만
-# 값은 server/README.md, web/README.md 의 표 참고. .env.example 은 의도적으로 빈 파일이다.
+# server/.env, web/.env 를 직접 만든다. 변수는 server/README.md, web/README.md 표.
 
 pnpm docker:dev                   # Postgres(5432) + Adminer(8080)
 pnpm db:push                      # 스키마를 로컬 DB 에 반영 (마이그레이션 파일 없이)

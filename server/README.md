@@ -6,7 +6,7 @@ NestJS 12 + Drizzle ORM(PostgreSQL) 기반 API 서버.
 
 ```bash
 pnpm install                  # 리포지토리 루트에서 1회
-cp server/.env.example server/.env
+# server/.env 를 직접 만든다 (아래 표)
 
 pnpm --filter @nest-vue/server dev     # 개발 (tsc watch + tsc-alias watch + node --watch)
 pnpm --filter @nest-vue/server build   # 프로덕션 빌드
@@ -21,15 +21,18 @@ pnpm docker:dev
 
 ## 환경 변수
 
-`.env.example` 은 의도적으로 빈 파일이다. 아래 값을 `server/.env` 에 채운다.
+`server/.env` 를 직접 만들고 아래 값을 채운다. 예시 파일은 없다.
 
-| 변수                | 필수 | 기본값 | 설명                                  |
-| ------------------- | ---- | ------ | ------------------------------------- |
-| `DATABASE_URL`      | O    | -      | `postgresql://user:pass@host:5432/db` |
-| `PORT`              | X    | `3000` | HTTP 포트                             |
-| `CORS_ORIGIN`       | X    | `*`    | 허용 오리진                           |
-| `DATABASE_POOL_MAX` | X    | `10`   | pg 커넥션 풀 최대 크기                |
-| `NODE_ENV`          | X    | -      | `development` / `production`          |
+| 변수                    | 필수 | 기본값 | 설명                                  |
+| ----------------------- | ---- | ------ | ------------------------------------- |
+| `DATABASE_URL`          | O    | -      | `postgresql://user:pass@host:5432/db` |
+| `PORT`                  | X    | `3000` | HTTP 포트                             |
+| `CORS_ORIGIN`           | X    | `*`    | 허용 오리진                           |
+| `DATABASE_POOL_MAX`     | X    | `10`   | pg 커넥션 풀 최대 크기                |
+| `NODE_ENV`              | X    | -      | `development` / `production`          |
+| `TOUR_API_KEY`          | O    | -      | 한국관광공사 TourAPI (v0.1)           |
+| `HERITAGE_API_BASE_URL` | O    | -      | 국가유산청 API 베이스 (v0.1)          |
+| `HERITAGE_API_KEY`      | X    | -      | 국가유산청이 키를 요구하면 추가       |
 
 예시:
 
@@ -39,6 +42,8 @@ PORT=3000
 CORS_ORIGIN=http://localhost:5173
 DATABASE_URL=postgresql://postgres:postgres@localhost:5432/nest_vue
 DATABASE_POOL_MAX=10
+TOUR_API_KEY=
+HERITAGE_API_BASE_URL=http://www.khs.go.kr/cha
 ```
 
 ## Drizzle
