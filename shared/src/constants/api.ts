@@ -10,3 +10,16 @@ export const DEFAULT_LOCALE: SupportedLocale = 'ko';
 
 export const DEFAULT_PAGE_SIZE = 20;
 export const MAX_PAGE_SIZE = 100;
+
+/** `API_PREFIX` 아래 경로. 예: /api/places/map */
+export const API_ROUTES = {
+  HEALTH: 'health',
+  PLACES: 'places',
+  PLACES_MAP: 'places/map',
+  EXHIBITIONS: 'exhibitions',
+  AUTH: 'auth',
+  FAVORITES: 'favorites',
+  COMMENTS: 'comments',
+  NOTIFICATIONS: 'notifications',
+  EVENTS: 'events',
+} as const;
