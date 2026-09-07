@@ -78,11 +78,12 @@ pnpm --filter @nest-vue/server test:e2e   # e2e (test/**/*.e2e-spec.ts)
 
 ## API
 
-| 메서드 | 경로                     | 설명                      |
-| ------ | ------------------------ | ------------------------- |
-| GET    | `/api/health`            | 헬스체크                  |
-| GET    | `/api/users?page=&size=` | 사용자 목록(페이지네이션) |
-| GET    | `/api/users/:id`         | 단건 조회                 |
-| POST   | `/api/users`             | 생성                      |
-| PATCH  | `/api/users/:id`         | 수정                      |
-| DELETE | `/api/users/:id`         | 삭제                      |
+| 메서드 | 경로                                          | 설명                                         |
+| ------ | --------------------------------------------- | -------------------------------------------- |
+| GET    | `/api/health`                                 | 헬스체크                                     |
+| GET    | `/api/places/map?swLat=&swLng=&neLat=&neLng=` | 지도 bbox. Tour만. 실패는 `tour.items: null` |
+| GET    | `/api/users?page=&size=`                      | 사용자 목록(페이지네이션)                    |
+| GET    | `/api/users/:id`                              | 단건 조회                                    |
+| POST   | `/api/users`                                  | 생성                                         |
+| PATCH  | `/api/users/:id`                              | 수정                                         |
+| DELETE | `/api/users/:id`                              | 삭제                                         |
