@@ -1,6 +1,6 @@
 import type { MapPlacesQuery } from '@nest-vue/shared';
 
-/** 약 220km. Tour 어댑터 반경 상한(20km)보다 넓게 두어 화면 이동은 허용한다. */
+/** 약 220km. 화면이 이보다 크면 클라이언트가 잘라 보낸다. Tour는 셀당 20km라 넓은 화면은 여러 셀로 덮는다. */
 export const MAX_MAP_BBOX_SPAN_DEG = 2;
 
 export function validateMapBbox(query: MapPlacesQuery): string | null {

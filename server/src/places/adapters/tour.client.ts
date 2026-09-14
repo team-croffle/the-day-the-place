@@ -7,6 +7,9 @@ export const TOUR_API_DEFAULT_BASE = 'https://apis.data.go.kr/B551011/KorService
 const LIST_PATH = 'locationBasedList2';
 const REQUEST_TIMEOUT_MS = 8000;
 const MAX_RADIUS_M = 20_000;
+const MAX_COVERAGE_AXIS = 3;
+const CELL_SPACING_M = 28_000;
+const CELL_BATCH = 3;
 const NUM_OF_ROWS = 100;
 
 export class TourAdapterError extends Error {
@@ -28,38 +31,65 @@ export async function listTourPlaces(
   query: MapPlacesQuery,
   options: TourListOptions,
 ): Promise<PlaceSummary[]> {
-  const { mapX, mapY, radius } = bboxToLocation(query);
+  const cells = coverageCells(query);
   const fetchImpl = options.fetchImpl ?? fetch;
-  const [culture, attraction] = await Promise.all([
-    fetchList({
-      mapX,
-      mapY,
-      radius,
-      contentTypeId: TOUR_CONTENT_TYPE.culture,
-      options,
-      fetchImpl,
-    }),
-    fetchList({
-      mapX,
-      mapY,
-      radius,
-      contentTypeId: TOUR_CONTENT_TYPE.attraction,
-      options,
-      fetchImpl,
-    }),
-  ]);
+  const settled = await mapInBatches(cells, CELL_BATCH, (cell) =>
+    fetchCell(cell, options, fetchImpl),
+  );
+
+  const raw: TourListItem[] = [];
+  const failures: unknown[] = [];
+  for (const result of settled) {
+    if (result.status === 'fulfilled') {
+      raw.push(...result.value);
+    } else {
+      failures.push(result.reason);
+    }
+  }
+  if (raw.length === 0 && failures.length > 0) {
+    const first = failures[0];
+    throw first instanceof Error
+      ? first
+      : new TourAdapterError(`TourAPI request failed: ${String(first)}`);
+  }
 
   const seen = new Set<string>();
   const items: PlaceSummary[] = [];
-  for (const raw of [...culture, ...attraction]) {
-    const place = toTourPlaceSummary(raw);
-    if (!place || seen.has(place.id)) {
+  for (const row of raw) {
+    const place = toTourPlaceSummary(row);
+    if (!place || seen.has(place.id) || !placeInBbox(place, query)) {
       continue;
     }
     seen.add(place.id);
     items.push(place);
   }
   return items;
+}
+
+async function fetchCell(
+  cell: CoverageCell,
+  options: TourListOptions,
+  fetchImpl: TourFetch,
+): Promise<TourListItem[]> {
+  const [culture, attraction] = await Promise.all([
+    fetchList({
+      mapX: cell.mapX,
+      mapY: cell.mapY,
+      radius: cell.radius,
+      contentTypeId: TOUR_CONTENT_TYPE.culture,
+      options,
+      fetchImpl,
+    }),
+    fetchList({
+      mapX: cell.mapX,
+      mapY: cell.mapY,
+      radius: cell.radius,
+      contentTypeId: TOUR_CONTENT_TYPE.attraction,
+      options,
+      fetchImpl,
+    }),
+  ]);
+  return [...culture, ...attraction];
 }
 
 async function fetchList(params: {
@@ -150,11 +180,45 @@ function gatewayErrorMessage(body: string): string | undefined {
   }
 }
 
-export function bboxToLocation(query: MapPlacesQuery): {
+export interface CoverageCell {
   mapX: number;
   mapY: number;
   radius: number;
-} {
+}
+
+export function placeInBbox(place: { lat: number; lng: number }, query: MapPlacesQuery): boolean {
+  return (
+    place.lat >= query.swLat &&
+    place.lat <= query.neLat &&
+    place.lng >= query.swLng &&
+    place.lng <= query.neLng
+  );
+}
+
+/** Tour 반경 상한 20km. 화면이 더 넓으면 여러 중심으로 덮는다. */
+export function coverageCells(query: MapPlacesQuery): CoverageCell[] {
+  const width = haversineMeters(query.swLat, query.swLng, query.swLat, query.neLng);
+  const height = haversineMeters(query.swLat, query.swLng, query.neLat, query.swLng);
+  const cols = Math.min(MAX_COVERAGE_AXIS, Math.max(1, Math.ceil(width / CELL_SPACING_M)));
+  const rows = Math.min(MAX_COVERAGE_AXIS, Math.max(1, Math.ceil(height / CELL_SPACING_M)));
+  if (cols === 1 && rows === 1) {
+    return [bboxToLocation(query)];
+  }
+
+  const cells: CoverageCell[] = [];
+  const latSpan = query.neLat - query.swLat;
+  const lngSpan = query.neLng - query.swLng;
+  for (let row = 0; row < rows; row += 1) {
+    for (let col = 0; col < cols; col += 1) {
+      const mapY = query.swLat + ((row + 0.5) / rows) * latSpan;
+      const mapX = query.swLng + ((col + 0.5) / cols) * lngSpan;
+      cells.push({ mapX, mapY, radius: MAX_RADIUS_M });
+    }
+  }
+  return cells;
+}
+
+export function bboxToLocation(query: MapPlacesQuery): CoverageCell {
   const mapY = (query.swLat + query.neLat) / 2;
   const mapX = (query.swLng + query.neLng) / 2;
   const radius = Math.min(
@@ -162,6 +226,19 @@ export function bboxToLocation(query: MapPlacesQuery): {
     Math.max(500, Math.round(haversineMeters(mapY, mapX, query.neLat, query.neLng))),
   );
   return { mapX, mapY, radius };
+}
+
+async function mapInBatches<T, R>(
+  items: T[],
+  batchSize: number,
+  fn: (item: T) => Promise<R>,
+): Promise<PromiseSettledResult<R>[]> {
+  const results: PromiseSettledResult<R>[] = [];
+  for (let i = 0; i < items.length; i += batchSize) {
+    const batch = items.slice(i, i + batchSize).map((item) => fn(item));
+    results.push(...(await Promise.allSettled(batch)));
+  }
+  return results;
 }
 
 function toRad(deg: number): number {
