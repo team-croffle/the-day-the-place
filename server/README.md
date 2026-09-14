@@ -31,7 +31,7 @@ pnpm docker:dev
 | `DATABASE_POOL_MAX`     | X    | `10`                                          | pg 커넥션 풀 최대 크기                |
 | `NODE_ENV`              | X    | -                                             | `development` / `production`          |
 | `TOUR_API_KEY`          | O    | -                                             | 한국관광공사 TourAPI (v0.1)           |
-| `TOUR_API_BASE_URL`     | X    | `https://apis.data.go.kr/B551011/KorService1` | TourAPI 베이스 URL                    |
+| `TOUR_API_BASE_URL`     | X    | `https://apis.data.go.kr/B551011/KorService2` | TourAPI 베이스 URL                    |
 | `HERITAGE_API_BASE_URL` | X    | -                                             | 국가유산청 API 베이스 (v0.2 상세)     |
 | `HERITAGE_API_KEY`      | X    | -                                             | 국가유산청이 키를 요구하면 추가       |
 

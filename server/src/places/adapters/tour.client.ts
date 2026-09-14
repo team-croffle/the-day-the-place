@@ -3,7 +3,8 @@ import { TOUR_CONTENT_TYPE, type MapPlacesQuery, type PlaceSummary } from '@nest
 import { toTourPlaceSummary, unwrapTourItems } from './tour.mapper';
 import type { TourListItem, TourListResponse } from './tour.types';
 
-export const TOUR_API_DEFAULT_BASE = 'https://apis.data.go.kr/B551011/KorService1';
+export const TOUR_API_DEFAULT_BASE = 'https://apis.data.go.kr/B551011/KorService2';
+const LIST_PATH = 'locationBasedList2';
 const REQUEST_TIMEOUT_MS = 8000;
 const MAX_RADIUS_M = 20_000;
 const NUM_OF_ROWS = 100;
@@ -74,8 +75,8 @@ async function fetchList(params: {
     throw new TourAdapterError('TOUR_API_KEY is not set');
   }
 
-  const base = (params.options.baseUrl ?? TOUR_API_DEFAULT_BASE).replace(/\/$/, '');
-  const url = new URL(`${base}/locationBasedList1`);
+  const base = resolveTourApiBaseUrl(params.options.baseUrl);
+  const url = new URL(`${base}/${LIST_PATH}`);
   url.searchParams.set('numOfRows', String(NUM_OF_ROWS));
   url.searchParams.set('pageNo', '1');
   url.searchParams.set('MobileOS', 'ETC');
@@ -101,11 +102,20 @@ async function fetchList(params: {
     clearTimeout(timer);
   }
 
+  const body = await response.text();
   if (!response.ok) {
-    throw new TourAdapterError(`TourAPI HTTP ${response.status}`);
+    const gateway = gatewayErrorMessage(body);
+    throw new TourAdapterError(
+      gateway ? `TourAPI HTTP ${response.status}: ${gateway}` : `TourAPI HTTP ${response.status}`,
+    );
   }
 
-  const payload = (await response.json()) as TourListResponse;
+  let payload: TourListResponse;
+  try {
+    payload = JSON.parse(body) as TourListResponse;
+  } catch {
+    throw new TourAdapterError('TourAPI returned non-JSON');
+  }
   const code = payload.response?.header?.resultCode ?? '';
   if (code && code !== '0000') {
     const msg = payload.response?.header?.resultMsg ?? code;
@@ -113,6 +123,31 @@ async function fetchList(params: {
   }
 
   return unwrapTourItems(payload.response?.body?.items);
+}
+
+/** KorService1은 폐기됐다. .env에 옛 기본값이 남아 있어도 v2로 붙인다. */
+export function resolveTourApiBaseUrl(raw?: string): string {
+  return (raw ?? TOUR_API_DEFAULT_BASE)
+    .replace(/\/$/, '')
+    .replace(/\/KorService1$/i, '/KorService2');
+}
+
+function gatewayErrorMessage(body: string): string | undefined {
+  try {
+    const parsed = JSON.parse(body) as {
+      OpenAPI_ServiceResponse?: {
+        cmmMsgHeader?: { errMsg?: string; returnReasonCode?: string };
+      };
+    };
+    const header = parsed.OpenAPI_ServiceResponse?.cmmMsgHeader;
+    const msg = header?.errMsg?.trim();
+    if (!msg) {
+      return undefined;
+    }
+    return header?.returnReasonCode ? `${msg} (${header.returnReasonCode})` : msg;
+  } catch {
+    return undefined;
+  }
 }
 
 export function bboxToLocation(query: MapPlacesQuery): {
