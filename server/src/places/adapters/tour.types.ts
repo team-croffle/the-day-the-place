@@ -23,6 +23,7 @@ export interface TourListResponse {
     };
     body?: {
       items?: { item?: TourListItem | TourListItem[] } | string;
+      totalCount?: number | string;
     };
   };
 }

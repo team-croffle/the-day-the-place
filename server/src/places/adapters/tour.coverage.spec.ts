@@ -1,4 +1,17 @@
-import { coverageCells, placeInBbox } from './tour.client';
+import { intersectingAreaCodes } from './tour.areas';
+import { coverageCells, listTourPlaces, placeInBbox } from './tour.client';
+
+function emptyTourResponse(): Response {
+  return new Response(
+    JSON.stringify({
+      response: {
+        header: { resultCode: '0000', resultMsg: 'OK' },
+        body: { items: { item: [] }, totalCount: 0 },
+      },
+    }),
+    { headers: { 'content-type': 'application/json' } },
+  );
+}
 
 describe('coverageCells', () => {
   it('uses one center when the view fits in 20km', () => {
@@ -36,5 +49,54 @@ describe('placeInBbox', () => {
 
   it('drops a place outside the view', () => {
     expect(placeInBbox({ lat: 35.0, lng: 129.0 }, box)).toBe(false);
+  });
+});
+
+describe('intersectingAreaCodes', () => {
+  it('includes Jeonbuk for a Gunsan-Jeonju view', () => {
+    const codes = intersectingAreaCodes({
+      swLat: 35.4,
+      swLng: 126.4,
+      neLat: 36.1,
+      neLng: 127.3,
+    });
+    expect(codes).toContain('35');
+  });
+});
+
+describe('listTourPlaces', () => {
+  it('uses areaBasedList2 with cat2 when the view is wider than 20km', async () => {
+    const urls: string[] = [];
+    const items = await listTourPlaces(
+      { swLat: 35.4, swLng: 126.4, neLat: 36.1, neLng: 127.3 },
+      {
+        apiKey: 'test-key',
+        fetchImpl: async (input) => {
+          urls.push(String(input));
+          return emptyTourResponse();
+        },
+      },
+    );
+    expect(items).toEqual([]);
+    expect(urls.some((url) => url.includes('areaBasedList2'))).toBe(true);
+    expect(urls.every((url) => !url.includes('locationBasedList2'))).toBe(true);
+    expect(urls.some((url) => url.includes('cat2=A0201'))).toBe(true);
+    expect(urls.some((url) => url.includes('cat2=A0206'))).toBe(true);
+  });
+
+  it('stays on locationBasedList2 when the view fits in 20km', async () => {
+    const urls: string[] = [];
+    await listTourPlaces(
+      { swLat: 37.55, swLng: 126.96, neLat: 37.58, neLng: 127.0 },
+      {
+        apiKey: 'test-key',
+        fetchImpl: async (input) => {
+          urls.push(String(input));
+          return emptyTourResponse();
+        },
+      },
+    );
+    expect(urls.some((url) => url.includes('locationBasedList2'))).toBe(true);
+    expect(urls.every((url) => !url.includes('areaBasedList2'))).toBe(true);
   });
 });

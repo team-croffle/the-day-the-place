@@ -1,7 +1,7 @@
 import type { MapPlacesQuery } from '@nest-vue/shared';
 
-/** 약 220km. 화면이 이보다 크면 클라이언트가 잘라 보낸다. Tour는 셀당 20km라 넓은 화면은 여러 셀로 덮는다. */
-export const MAX_MAP_BBOX_SPAN_DEG = 2;
+/** 한반도 전체가 한 화면에 들어와도 되게. */
+export const MAX_MAP_BBOX_SPAN_DEG = 8;
 
 export function validateMapBbox(query: MapPlacesQuery): string | null {
   const { swLat, swLng, neLat, neLng } = query;
