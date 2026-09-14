@@ -1,20 +1,77 @@
 {
   "app": {
-    "title": "nest-vue",
-    "description": "NestJS + Vue 3 모노레포 스타터"
+    "title": "그 날, 그 곳",
+    "tagline": "The Day, The Place",
+    "description": "역사 관광 장소와 특별전을 한곳에서 본다"
   },
   "nav": {
-    "home": "홈",
-    "about": "소개",
-    "users": "사용자"
+    "map": "지도",
+    "museums": "박물관",
+    "sites": "유적지",
+    "exhibitions": "특별전",
+    "login": "로그인",
+    "signup": "회원가입"
   },
   "home": {
-    "heading": "안녕하세요 👋",
-    "body": "server, web, shared 세 워크스페이스로 구성된 pnpm 모노레포입니다."
+    "heroEyebrow": "준비 중",
+    "heroTitle": "그 날의 장소가 곧 열립니다",
+    "heroBody": "특별전 실데이터는 이후 버전에서 붙입니다. 지금은 화면 구성만 둡니다.",
+    "heroCta": "특별전 목록",
+    "search": "검색",
+    "searchPlaceholder": "박물관, 유적지, 특별전 검색…",
+    "exhibitionsEyebrow": "Current exhibitions",
+    "exhibitionsTitle": "진행중인 특별전",
+    "sitesEyebrow": "Heritage sites",
+    "sitesTitle": "추천 역사 유적지",
+    "erasEyebrow": "Explore by period",
+    "erasTitle": "시대별로 탐방하기",
+    "seeAll": "전체 보기",
+    "placeholderTitle": "준비 중",
+    "placeholderSoon": "실데이터는 이후 버전에서 채웁니다",
+    "eraAll": "전체",
+    "eraThree": "삼국시대",
+    "eraGoryeo": "고려시대",
+    "eraJoseon": "조선시대",
+    "eraModern": "근현대"
+  },
+  "map": {
+    "heading": "지도",
+    "body": "카카오맵과 마커는 다음 작업에서 붙입니다."
+  },
+  "museums": {
+    "heading": "박물관",
+    "body": "목록과 상세는 v0.2에서 채웁니다."
+  },
+  "sites": {
+    "heading": "유적지",
+    "body": "목록과 상세는 v0.2에서 채웁니다."
+  },
+  "exhibitions": {
+    "heading": "특별전",
+    "body": "예정·진행 전시는 v0.3에서 채웁니다."
+  },
+  "auth": {
+    "loginHeading": "로그인",
+    "loginBody": "회원 기능은 v0.4에서 붙입니다.",
+    "signupHeading": "회원가입",
+    "signupBody": "회원 기능은 v0.4에서 붙입니다."
   },
   "about": {
     "heading": "이 프로젝트에 대해",
-    "body": "타입은 shared 패키지에서 정의하고 server 와 web 이 소스 그대로 참조합니다."
+    "body": "역사 관광 장소(박물관·유적지)와 특별전 정보를 한 플랫폼에서 보여 줍니다."
+  },
+  "footer": {
+    "blurb": "대한민국의 역사와 문화를 잇는 역사 공간 탐방 플랫폼.",
+    "explore": "탐방",
+    "museums": "박물관",
+    "sites": "유적지",
+    "exhibitions": "특별전",
+    "eras": "시대별 탐방",
+    "service": "서비스",
+    "serviceSoon": "준비 중",
+    "info": "정보",
+    "about": "소개",
+    "copyright": "© 그 날, 그 곳. All rights reserved."
   },
   "health": {
     "heading": "서버 상태",

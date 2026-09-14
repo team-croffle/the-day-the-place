@@ -1,20 +1,77 @@
 {
   "app": {
-    "title": "nest-vue",
-    "description": "NestJS + Vue 3 monorepo starter"
+    "title": "그 날, 그 곳",
+    "tagline": "The Day, The Place",
+    "description": "Historic sites and special exhibitions in one place"
   },
   "nav": {
-    "home": "Home",
-    "about": "About",
-    "users": "Users"
+    "map": "Map",
+    "museums": "Museums",
+    "sites": "Sites",
+    "exhibitions": "Exhibitions",
+    "login": "Log in",
+    "signup": "Sign up"
   },
   "home": {
-    "heading": "Hello 👋",
-    "body": "A pnpm monorepo made of three workspaces: server, web and shared."
+    "heroEyebrow": "Coming soon",
+    "heroTitle": "Places from that day will open here",
+    "heroBody": "Live exhibition data comes in a later version. This is the page shell.",
+    "heroCta": "Exhibitions",
+    "search": "Search",
+    "searchPlaceholder": "Search museums, sites, exhibitions…",
+    "exhibitionsEyebrow": "Current exhibitions",
+    "exhibitionsTitle": "Now on view",
+    "sitesEyebrow": "Heritage sites",
+    "sitesTitle": "Recommended historic sites",
+    "erasEyebrow": "Explore by period",
+    "erasTitle": "Browse by era",
+    "seeAll": "See all",
+    "placeholderTitle": "Coming soon",
+    "placeholderSoon": "Real data lands in a later version",
+    "eraAll": "All",
+    "eraThree": "Three Kingdoms",
+    "eraGoryeo": "Goryeo",
+    "eraJoseon": "Joseon",
+    "eraModern": "Modern"
+  },
+  "map": {
+    "heading": "Map",
+    "body": "Kakao Map and markers come in the next unit."
+  },
+  "museums": {
+    "heading": "Museums",
+    "body": "List and detail pages land in v0.2."
+  },
+  "sites": {
+    "heading": "Heritage sites",
+    "body": "List and detail pages land in v0.2."
+  },
+  "exhibitions": {
+    "heading": "Exhibitions",
+    "body": "Upcoming and current shows land in v0.3."
+  },
+  "auth": {
+    "loginHeading": "Log in",
+    "loginBody": "Accounts land in v0.4.",
+    "signupHeading": "Sign up",
+    "signupBody": "Accounts land in v0.4."
   },
   "about": {
-    "heading": "About this project",
-    "body": "Types live in the shared package and are consumed as source by both server and web."
+    "heading": "About",
+    "body": "A platform for historic sites (museums and heritage) and special exhibitions."
+  },
+  "footer": {
+    "blurb": "A platform for exploring historic places in Korea.",
+    "explore": "Explore",
+    "museums": "Museums",
+    "sites": "Sites",
+    "exhibitions": "Exhibitions",
+    "eras": "By era",
+    "service": "Services",
+    "serviceSoon": "Coming soon",
+    "info": "Info",
+    "about": "About",
+    "copyright": "© The Day, The Place. All rights reserved."
   },
   "health": {
     "heading": "Server health",

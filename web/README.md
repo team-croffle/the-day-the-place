@@ -34,8 +34,13 @@ VITE_KAKAO_MAP_KEY=
 
 `vue-router` v5 의 내장 파일 기반 라우팅을 사용한다 (구 `unplugin-vue-router` 가 v5 에 통합됨).
 
-- 라우트 파일 위치: `src/routes/`
-- `src/routes/index.vue` → `/`, `src/routes/about.vue` → `/about`
+- `src/routes/index.vue` → `/`
+- `src/routes/map.vue` → `/map`
+- `src/routes/museums/index.vue` → `/museums`
+- `src/routes/sites/index.vue` → `/sites`
+- `src/routes/exhibitions/index.vue` → `/exhibitions`
+- `src/routes/login.vue` → `/login`, `src/routes/signup.vue` → `/signup`
+- `src/routes/about.vue` → `/about`
 - `[id].vue` → 동적 파라미터, `[...path].vue` → catch-all
 - 타입 정의는 `src/typed-router.d.ts` 로 자동 생성된다 (git ignore 대상)
 

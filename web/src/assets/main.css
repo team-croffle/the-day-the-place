@@ -3,14 +3,21 @@
 @theme {
   --font-sans:
     'Pretendard Variable', Pretendard, ui-sans-serif, system-ui, 'Segoe UI', Roboto, sans-serif;
+  --color-ink: #1c1917;
+  --color-cream: #f6f1e8;
+  --color-paper: #faf7f2;
+  --color-gold: #c4a574;
+  --color-gold-hover: #b08950;
+  --color-muted: #6b6560;
+  --color-line: #e7e0d4;
 }
 
 @layer base {
   html {
-    color-scheme: light dark;
+    color-scheme: light;
   }
 
   body {
-    @apply bg-white text-slate-900 antialiased dark:bg-slate-950 dark:text-slate-100;
+    @apply bg-cream text-ink antialiased;
   }
 }
