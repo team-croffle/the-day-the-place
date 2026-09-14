@@ -23,16 +23,17 @@ pnpm docker:dev
 
 `server/.env` 를 직접 만들고 아래 값을 채운다. 예시 파일은 없다.
 
-| 변수                    | 필수 | 기본값 | 설명                                  |
-| ----------------------- | ---- | ------ | ------------------------------------- |
-| `DATABASE_URL`          | O    | -      | `postgresql://user:pass@host:5432/db` |
-| `PORT`                  | X    | `3000` | HTTP 포트                             |
-| `CORS_ORIGIN`           | X    | `*`    | 허용 오리진                           |
-| `DATABASE_POOL_MAX`     | X    | `10`   | pg 커넥션 풀 최대 크기                |
-| `NODE_ENV`              | X    | -      | `development` / `production`          |
-| `TOUR_API_KEY`          | O    | -      | 한국관광공사 TourAPI (v0.1)           |
-| `HERITAGE_API_BASE_URL` | O    | -      | 국가유산청 API 베이스 (v0.1)          |
-| `HERITAGE_API_KEY`      | X    | -      | 국가유산청이 키를 요구하면 추가       |
+| 변수                    | 필수 | 기본값                                        | 설명                                  |
+| ----------------------- | ---- | --------------------------------------------- | ------------------------------------- |
+| `DATABASE_URL`          | O    | -                                             | `postgresql://user:pass@host:5432/db` |
+| `PORT`                  | X    | `3000`                                        | HTTP 포트                             |
+| `CORS_ORIGIN`           | X    | `*`                                           | 허용 오리진                           |
+| `DATABASE_POOL_MAX`     | X    | `10`                                          | pg 커넥션 풀 최대 크기                |
+| `NODE_ENV`              | X    | -                                             | `development` / `production`          |
+| `TOUR_API_KEY`          | O    | -                                             | 한국관광공사 TourAPI (v0.1)           |
+| `TOUR_API_BASE_URL`     | X    | `https://apis.data.go.kr/B551011/KorService1` | TourAPI 베이스 URL                    |
+| `HERITAGE_API_BASE_URL` | X    | -                                             | 국가유산청 API 베이스 (v0.2 상세)     |
+| `HERITAGE_API_KEY`      | X    | -                                             | 국가유산청이 키를 요구하면 추가       |
 
 예시:
 
@@ -77,11 +78,12 @@ pnpm --filter @nest-vue/server test:e2e   # e2e (test/**/*.e2e-spec.ts)
 
 ## API
 
-| 메서드 | 경로                     | 설명                      |
-| ------ | ------------------------ | ------------------------- |
-| GET    | `/api/health`            | 헬스체크                  |
-| GET    | `/api/users?page=&size=` | 사용자 목록(페이지네이션) |
-| GET    | `/api/users/:id`         | 단건 조회                 |
-| POST   | `/api/users`             | 생성                      |
-| PATCH  | `/api/users/:id`         | 수정                      |
-| DELETE | `/api/users/:id`         | 삭제                      |
+| 메서드 | 경로                                          | 설명                                         |
+| ------ | --------------------------------------------- | -------------------------------------------- |
+| GET    | `/api/health`                                 | 헬스체크                                     |
+| GET    | `/api/places/map?swLat=&swLng=&neLat=&neLng=` | 지도 bbox. Tour만. 실패는 `tour.items: null` |
+| GET    | `/api/users?page=&size=`                      | 사용자 목록(페이지네이션)                    |
+| GET    | `/api/users/:id`                              | 단건 조회                                    |
+| POST   | `/api/users`                                  | 생성                                         |
+| PATCH  | `/api/users/:id`                              | 수정                                         |
+| DELETE | `/api/users/:id`                              | 삭제                                         |
