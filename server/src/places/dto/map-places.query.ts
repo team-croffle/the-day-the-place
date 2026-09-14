@@ -19,7 +19,7 @@ class MapBboxConstraint implements ValidatorConstraintInterface {
   }
 
   defaultMessage(): string {
-    return 'bbox sw corner must be south-west of ne, with span at most 2 degrees';
+    return 'bbox sw corner must be south-west of ne, with span at most 8 degrees';
   }
 }
 

@@ -1,16 +1,25 @@
-import { TOUR_CONTENT_TYPE, type MapPlacesQuery, type PlaceSummary } from '@nest-vue/shared';
+import {
+  TOUR_CAT2_HISTORY,
+  TOUR_CONTENT_TYPE,
+  type MapPlacesQuery,
+  type PlaceSummary,
+} from '@nest-vue/shared';
 
+import { intersectingAreaCodes } from './tour.areas';
 import { toTourPlaceSummary, unwrapTourItems } from './tour.mapper';
 import type { TourListItem, TourListResponse } from './tour.types';
 
 export const TOUR_API_DEFAULT_BASE = 'https://apis.data.go.kr/B551011/KorService2';
-const LIST_PATH = 'locationBasedList2';
-const REQUEST_TIMEOUT_MS = 8000;
+const LOCATION_LIST_PATH = 'locationBasedList2';
+const AREA_LIST_PATH = 'areaBasedList2';
+const TOUR_CAT2_CULTURE = 'A0206';
+const REQUEST_TIMEOUT_MS = 20_000;
 const MAX_RADIUS_M = 20_000;
 const MAX_COVERAGE_AXIS = 3;
 const CELL_SPACING_M = 28_000;
-const CELL_BATCH = 3;
+const CELL_BATCH = 6;
 const NUM_OF_ROWS = 100;
+const MAX_AREA_PAGES = 8;
 
 export class TourAdapterError extends Error {
   constructor(message: string) {
@@ -31,12 +40,60 @@ export async function listTourPlaces(
   query: MapPlacesQuery,
   options: TourListOptions,
 ): Promise<PlaceSummary[]> {
-  const cells = coverageCells(query);
   const fetchImpl = options.fetchImpl ?? fetch;
-  const settled = await mapInBatches(cells, CELL_BATCH, (cell) =>
-    fetchCell(cell, options, fetchImpl),
-  );
+  const raw =
+    coverageCells(query).length > 1
+      ? await listByAreas(query, options, fetchImpl)
+      : await listByLocation(query, options, fetchImpl);
+  return toUniqueInBbox(raw, query);
+}
 
+function toUniqueInBbox(raw: TourListItem[], query: MapPlacesQuery): PlaceSummary[] {
+  const seen = new Set<string>();
+  const items: PlaceSummary[] = [];
+  for (const row of raw) {
+    const place = toTourPlaceSummary(row);
+    if (!place || seen.has(place.id) || !placeInBbox(place, query)) {
+      continue;
+    }
+    seen.add(place.id);
+    items.push(place);
+  }
+  return items;
+}
+
+async function listByLocation(
+  query: MapPlacesQuery,
+  options: TourListOptions,
+  fetchImpl: TourFetch,
+): Promise<TourListItem[]> {
+  const cells = coverageCells(query);
+  return collectSettled(
+    await mapInBatches(cells, CELL_BATCH, (cell) => fetchCell(cell, options, fetchImpl)),
+  );
+}
+
+async function listByAreas(
+  query: MapPlacesQuery,
+  options: TourListOptions,
+  fetchImpl: TourFetch,
+): Promise<TourListItem[]> {
+  const areaCodes = intersectingAreaCodes(query);
+  if (areaCodes.length === 0) {
+    return listByLocation(query, options, fetchImpl);
+  }
+  const jobs = areaCodes.flatMap((areaCode) => [
+    { areaCode, contentTypeId: TOUR_CONTENT_TYPE.culture, cat2: TOUR_CAT2_CULTURE },
+    { areaCode, contentTypeId: TOUR_CONTENT_TYPE.attraction, cat2: TOUR_CAT2_HISTORY },
+  ]);
+  return collectSettled(
+    await mapInBatches(jobs, CELL_BATCH, (job) =>
+      fetchArea(job.areaCode, job.contentTypeId, job.cat2, options, fetchImpl),
+    ),
+  );
+}
+
+function collectSettled(settled: PromiseSettledResult<TourListItem[]>[]): TourListItem[] {
   const raw: TourListItem[] = [];
   const failures: unknown[] = [];
   for (const result of settled) {
@@ -52,18 +109,7 @@ export async function listTourPlaces(
       ? first
       : new TourAdapterError(`TourAPI request failed: ${String(first)}`);
   }
-
-  const seen = new Set<string>();
-  const items: PlaceSummary[] = [];
-  for (const row of raw) {
-    const place = toTourPlaceSummary(row);
-    if (!place || seen.has(place.id) || !placeInBbox(place, query)) {
-      continue;
-    }
-    seen.add(place.id);
-    items.push(place);
-  }
-  return items;
+  return raw;
 }
 
 async function fetchCell(
@@ -100,29 +146,81 @@ async function fetchList(params: {
   options: TourListOptions;
   fetchImpl: TourFetch;
 }): Promise<TourListItem[]> {
-  const serviceKey = params.options.apiKey.trim();
+  const page = await tourGet(
+    LOCATION_LIST_PATH,
+    {
+      mapX: String(params.mapX),
+      mapY: String(params.mapY),
+      radius: String(params.radius),
+      contentTypeId: params.contentTypeId,
+    },
+    params.options,
+    params.fetchImpl,
+  );
+  return page.items;
+}
+
+async function fetchArea(
+  areaCode: string,
+  contentTypeId: string,
+  cat2: string,
+  options: TourListOptions,
+  fetchImpl: TourFetch,
+): Promise<TourListItem[]> {
+  const first = await tourGet(
+    AREA_LIST_PATH,
+    { areaCode, contentTypeId, cat2, pageNo: '1' },
+    options,
+    fetchImpl,
+  );
+  const pages = Math.min(MAX_AREA_PAGES, Math.max(1, Math.ceil(first.totalCount / NUM_OF_ROWS)));
+  if (pages <= 1) {
+    return first.items;
+  }
+  const rest = await Promise.all(
+    Array.from({ length: pages - 1 }, (_, index) =>
+      tourGet(
+        AREA_LIST_PATH,
+        { areaCode, contentTypeId, cat2, pageNo: String(index + 2) },
+        options,
+        fetchImpl,
+      ),
+    ),
+  );
+  return [...first.items, ...rest.flatMap((page) => page.items)];
+}
+
+async function tourGet(
+  path: string,
+  extra: Record<string, string>,
+  options: TourListOptions,
+  fetchImpl: TourFetch,
+): Promise<{ items: TourListItem[]; totalCount: number }> {
+  const serviceKey = options.apiKey.trim();
   if (!serviceKey) {
     throw new TourAdapterError('TOUR_API_KEY is not set');
   }
 
-  const base = resolveTourApiBaseUrl(params.options.baseUrl);
-  const url = new URL(`${base}/${LIST_PATH}`);
+  const base = resolveTourApiBaseUrl(options.baseUrl);
+  const url = new URL(`${base}/${path}`);
   url.searchParams.set('numOfRows', String(NUM_OF_ROWS));
-  url.searchParams.set('pageNo', '1');
+  url.searchParams.set('pageNo', extra.pageNo ?? '1');
   url.searchParams.set('MobileOS', 'ETC');
   url.searchParams.set('MobileApp', 'the-day-the-place');
   url.searchParams.set('_type', 'json');
-  url.searchParams.set('mapX', String(params.mapX));
-  url.searchParams.set('mapY', String(params.mapY));
-  url.searchParams.set('radius', String(params.radius));
-  url.searchParams.set('contentTypeId', params.contentTypeId);
+  for (const [key, value] of Object.entries(extra)) {
+    if (key === 'pageNo') {
+      continue;
+    }
+    url.searchParams.set(key, value);
+  }
   url.search = `${url.searchParams.toString()}&serviceKey=${serviceKey}`;
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
   let response: Response;
   try {
-    response = await params.fetchImpl(url.toString(), { signal: controller.signal });
+    response = await fetchImpl(url.toString(), { signal: controller.signal });
   } catch (error) {
     if (error instanceof Error && error.name === 'AbortError') {
       throw new TourAdapterError('TourAPI timed out');
@@ -152,7 +250,11 @@ async function fetchList(params: {
     throw new TourAdapterError(`TourAPI ${code}: ${msg}`);
   }
 
-  return unwrapTourItems(payload.response?.body?.items);
+  const totalCount = Number(payload.response?.body?.totalCount ?? 0);
+  return {
+    items: unwrapTourItems(payload.response?.body?.items),
+    totalCount: Number.isFinite(totalCount) ? totalCount : 0,
+  };
 }
 
 /** KorService1은 폐기됐다. .env에 옛 기본값이 남아 있어도 v2로 붙인다. */
