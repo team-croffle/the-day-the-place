@@ -14,13 +14,13 @@ const current = computed({
 </script>
 
 <template>
-  <label class="flex items-center gap-2 text-sm">
+  <label class="flex items-center gap-2 text-xs">
     <span class="sr-only">{{ t('locale.label') }}</span>
     <select
       v-model="current"
-      class="rounded-md border border-slate-300 bg-transparent px-2 py-1 dark:border-slate-700"
+      class="border-paper/30 text-paper rounded-sm border bg-transparent px-2 py-1"
     >
-      <option v-for="value in SUPPORTED_LOCALES" :key="value" :value="value">
+      <option v-for="value in SUPPORTED_LOCALES" :key="value" :value="value" class="text-ink">
         {{ value.toUpperCase() }}
       </option>
     </select>
