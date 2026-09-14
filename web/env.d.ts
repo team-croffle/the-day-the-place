@@ -7,6 +7,8 @@ interface ImportMetaEnv {
   readonly VITE_API_PROXY_TARGET?: string;
   /** dev 서버 포트 */
   readonly VITE_PORT?: string;
+  /** 카카오맵 JavaScript 키 */
+  readonly VITE_KAKAO_MAP_KEY?: string;
 }
 
 interface ImportMeta {

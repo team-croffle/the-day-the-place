@@ -36,7 +36,11 @@
   },
   "map": {
     "heading": "지도",
-    "body": "카카오맵과 마커는 다음 작업에서 붙입니다."
+    "body": "카카오맵과 마커는 다음 작업에서 붙입니다.",
+    "missingKey": "카카오맵 키가 없습니다. web/.env 의 VITE_KAKAO_MAP_KEY 를 확인하세요.",
+    "sdkError": "지도를 불러오지 못했습니다.",
+    "fetchError": "장소를 불러오지 못했습니다. 이전 마커를 유지합니다.",
+    "loading": "장소를 불러오는 중…"
   },
   "museums": {
     "heading": "박물관",
