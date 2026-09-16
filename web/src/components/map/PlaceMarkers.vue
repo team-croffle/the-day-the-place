@@ -155,7 +155,8 @@ function bindMap(map: KakaoMapInstance | null): void {
   overlay.setMap(mapRef);
   resizeObserver = new ResizeObserver(() => schedulePaint());
   resizeObserver.observe(mapRef.getNode());
-  schedulePaint();
+  // 목록이 카카오 SDK보다 먼저 오면 rebuildPins가 빈 배열로 끝난다. 지도가 붙은 뒤 다시 만든다.
+  rebuildPins();
 }
 
 function rebuildPins(): void {
