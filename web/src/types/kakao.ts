@@ -16,16 +16,7 @@ export interface KakaoPoint {
 export interface KakaoMapProjection {
   pointFromCoords(latlng: KakaoLatLng): KakaoPoint;
   containerPointFromCoords(latlng: KakaoLatLng): KakaoPoint;
-}
-
-export interface KakaoOverlayPanels {
-  overlayLayer: HTMLElement;
-}
-
-export interface KakaoAbstractOverlay {
-  setMap(map: KakaoMapInstance | null): void;
-  getPanels(): KakaoOverlayPanels;
-  getProjection(): KakaoMapProjection;
+  coordsFromContainerPoint(point: KakaoPoint): KakaoLatLng;
 }
 
 export interface KakaoMapInstance {
@@ -41,11 +32,11 @@ export interface KakaoMapInstance {
 export interface KakaoMapsNamespace {
   load: (callback: () => void) => void;
   LatLng: new (lat: number, lng: number) => KakaoLatLng;
+  Point: new (x: number, y: number) => KakaoPoint;
   Map: new (
     container: HTMLElement,
     options: { center: KakaoLatLng; level: number },
   ) => KakaoMapInstance;
-  AbstractOverlay: new () => KakaoAbstractOverlay;
   event: {
     addListener: (target: object, type: string, handler: () => void) => void;
     removeListener: (target: object, type: string, handler: () => void) => void;
