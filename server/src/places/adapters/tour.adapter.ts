@@ -4,7 +4,8 @@ import { ConfigService } from '@nestjs/config';
 
 import { listTourPlaces, TOUR_API_DEFAULT_BASE } from './tour.client';
 
-const CACHE_TTL_MS = 60_000;
+/** 장소 목록은 분 단위로 안 바뀐다. Nest가 떠 있는 동안 Tour를 하루 한 번만 긁는다. */
+const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 const cache = new Map<string, { expires: number; items: PlaceSummary[] }>();
 const inflight = new Map<string, Promise<PlaceSummary[]>>();
 
