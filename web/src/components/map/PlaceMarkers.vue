@@ -2,12 +2,7 @@
 import type { PlaceKind, PlaceSummary } from '@nest-vue/shared';
 import { onBeforeUnmount, toRaw, watch } from 'vue';
 
-import type {
-  KakaoAbstractOverlay,
-  KakaoLatLng,
-  KakaoMapInstance,
-  KakaoMapsNamespace,
-} from '@/types/kakao';
+import type { KakaoLatLng, KakaoMapInstance, KakaoMapsNamespace } from '@/types/kakao';
 
 const PIN_W = 24;
 const PIN_H = 32;
@@ -15,6 +10,8 @@ const COLORS: Record<PlaceKind, string> = {
   museum: '#1c1917',
   site: '#6b4f2a',
 };
+
+const MAP_EVENTS = ['center_changed', 'zoom_changed', 'idle'] as const;
 
 const props = defineProps<{
   map: KakaoMapInstance | null;
@@ -25,7 +22,7 @@ const props = defineProps<{
 type Pin = { latlng: KakaoLatLng; kind: PlaceKind };
 
 const canvas = document.createElement('canvas');
-canvas.style.cssText = 'position:absolute;left:0;top:0;pointer-events:none;';
+canvas.style.cssText = 'position:absolute;left:0;top:0;z-index:2;pointer-events:none;';
 
 const PIN_PATH = new Path2D(
   'M12 0C5.4 0 0 5.2 0 11.6 0 20.4 12 32 12 32s12-11.6 12-20.4C24 5.2 18.6 0 12 0z',
@@ -34,7 +31,6 @@ const PIN_PATH = new Path2D(
 let pins: Pin[] = [];
 let mapsRef: KakaoMapsNamespace | null = null;
 let mapRef: KakaoMapInstance | null = null;
-let overlay: KakaoAbstractOverlay | null = null;
 let raf = 0;
 let resizeObserver: ResizeObserver | null = null;
 
@@ -64,12 +60,10 @@ function drawPin(ctx: CanvasRenderingContext2D, x: number, y: number, color: str
 
 function paint(): void {
   const map = mapRef;
-  const maps = mapsRef;
-  if (!map || !maps) {
+  if (!map) {
     return;
   }
 
-  const projection = overlay?.getProjection() ?? map.getProjection();
   const node = map.getNode();
   const width = node.clientWidth;
   const height = node.clientHeight;
@@ -77,14 +71,6 @@ function paint(): void {
     return;
   }
 
-  const bounds = map.getBounds();
-  const northEast = bounds.getNorthEast();
-  const southWest = bounds.getSouthWest();
-  const origin = projection.pointFromCoords(
-    new maps.LatLng(northEast.getLat(), southWest.getLng()),
-  );
-  canvas.style.left = `${origin.x}px`;
-  canvas.style.top = `${origin.y}px`;
   canvas.style.width = `${width}px`;
   canvas.style.height = `${height}px`;
 
@@ -105,44 +91,33 @@ function paint(): void {
     return;
   }
 
+  const projection = map.getProjection();
   const padX = PIN_W;
   const padY = PIN_H;
   for (const pin of pins) {
-    const point = projection.pointFromCoords(pin.latlng);
-    const x = point.x - origin.x;
-    const y = point.y - origin.y;
-    if (x < -padX || y < -padY || x > width + padX || y > height + padY) {
+    const point = projection.containerPointFromCoords(pin.latlng);
+    if (point.x < -padX || point.y < -padY || point.x > width + padX || point.y > height + padY) {
       continue;
     }
-    drawPin(ctx, x, y, COLORS[pin.kind]);
+    drawPin(ctx, point.x, point.y, COLORS[pin.kind]);
   }
 }
 
-function createOverlay(maps: KakaoMapsNamespace): KakaoAbstractOverlay {
-  function PinOverlay(this: KakaoAbstractOverlay) {
-    maps.AbstractOverlay.call(this);
+function unbindMap(): void {
+  resizeObserver?.disconnect();
+  resizeObserver = null;
+  if (mapRef && mapsRef) {
+    for (const type of MAP_EVENTS) {
+      mapsRef.event.removeListener(mapRef, type, schedulePaint);
+    }
   }
-  PinOverlay.prototype = Object.create(maps.AbstractOverlay.prototype);
-  PinOverlay.prototype.constructor = PinOverlay;
-  PinOverlay.prototype.onAdd = function (this: KakaoAbstractOverlay) {
-    this.getPanels().overlayLayer.appendChild(canvas);
-  };
-  PinOverlay.prototype.onRemove = function () {
-    canvas.remove();
-  };
-  PinOverlay.prototype.draw = function () {
-    paint();
-  };
-  return new (PinOverlay as unknown as new () => KakaoAbstractOverlay)();
+  canvas.remove();
+  mapsRef = null;
+  mapRef = null;
 }
 
 function bindMap(map: KakaoMapInstance | null): void {
-  if (overlay) {
-    overlay.setMap(null);
-    overlay = null;
-  }
-  resizeObserver?.disconnect();
-  resizeObserver = null;
+  unbindMap();
 
   const maps = window.kakao?.maps;
   mapsRef = maps ?? null;
@@ -151,8 +126,10 @@ function bindMap(map: KakaoMapInstance | null): void {
     return;
   }
 
-  overlay = createOverlay(mapsRef);
-  overlay.setMap(mapRef);
+  mapRef.getNode().appendChild(canvas);
+  for (const type of MAP_EVENTS) {
+    mapsRef.event.addListener(mapRef, type, schedulePaint);
+  }
   resizeObserver = new ResizeObserver(() => schedulePaint());
   resizeObserver.observe(mapRef.getNode());
   // 목록이 카카오 SDK보다 먼저 오면 rebuildPins가 빈 배열로 끝난다. 지도가 붙은 뒤 다시 만든다.
