@@ -59,15 +59,15 @@ pnpm test:py
 
 `.env.example` 은 의도적으로 빈 파일이다.
 
-| 변수 | 필수 | 기본값 | 설명 |
-| --- | --- | --- | --- |
-| `DATABASE_URL` | O | - | `postgresql://user:pass@host:5432/db` |
-| `NAVER_CLIENT_ID` | O | - | 네이버 뉴스 검색 API |
-| `NAVER_CLIENT_SECRET` | O | - | 네이버 뉴스 검색 API |
-| `GEMINI_API_KEY` | O | - | Google AI Studio |
-| `TOUR_API_KEY` | X | `""` | 기관명 → `source+place_id` 연결용 |
-| `LOG_LEVEL` | X | `INFO` | `DEBUG`/`INFO`/`WARNING`/`ERROR` |
-| `DRY_RUN` | X | `false` | `true` 면 DB 에 쓰지 않는다 |
+| 변수                  | 필수 | 기본값  | 설명                                  |
+| --------------------- | ---- | ------- | ------------------------------------- |
+| `DATABASE_URL`        | O    | -       | `postgresql://user:pass@host:5432/db` |
+| `NAVER_CLIENT_ID`     | O    | -       | 네이버 뉴스 검색 API                  |
+| `NAVER_CLIENT_SECRET` | O    | -       | 네이버 뉴스 검색 API                  |
+| `GEMINI_API_KEY`      | O    | -       | Google AI Studio                      |
+| `TOUR_API_KEY`        | X    | `""`    | 기관명 → `source+place_id` 연결용     |
+| `LOG_LEVEL`           | X    | `INFO`  | `DEBUG`/`INFO`/`WARNING`/`ERROR`      |
+| `DRY_RUN`             | X    | `false` | `true` 면 DB 에 쓰지 않는다           |
 
 ## 스키마 소유권
 
@@ -133,11 +133,11 @@ Cloud Run Job 은 종료 코드 0 이면 성공으로 본다. `python -m collect
 
 ## 왜 두 갈래인가
 
-| | Modal | Cloud Run Job |
-| --- | --- | --- |
-| 스케줄 | `modal.Cron` (코드 안) | Cloud Scheduler (인프라) |
-| 이미지 | `uv_sync` 로 자동 | `Dockerfile` |
-| 진입점 | `collect()` → `run()` | `python -m collector` → `run()` |
-| 시크릿 | `modal.Secret` | Secret Manager |
+|        | Modal                  | Cloud Run Job                   |
+| ------ | ---------------------- | ------------------------------- |
+| 스케줄 | `modal.Cron` (코드 안) | Cloud Scheduler (인프라)        |
+| 이미지 | `uv_sync` 로 자동      | `Dockerfile`                    |
+| 진입점 | `collect()` → `run()`  | `python -m collector` → `run()` |
+| 시크릿 | `modal.Secret`         | Secret Manager                  |
 
 바뀌는 건 바깥 껍데기뿐이고, `run()` 과 `settings.py` 는 공유한다.
