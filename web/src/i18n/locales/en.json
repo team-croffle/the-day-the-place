@@ -40,7 +40,16 @@
     "missingKey": "Kakao Map key is missing. Set VITE_KAKAO_MAP_KEY in web/.env.",
     "sdkError": "Could not load the map.",
     "fetchError": "Could not load places. Existing markers are kept.",
-    "loading": "Loading places…"
+    "loading": "Loading places…",
+    "exploreEyebrow": "Explore",
+    "exploreTitle": "History map",
+    "searchPlaceholder": "Search place, region, era…",
+    "kindMuseum": "Museums",
+    "kindSite": "Sites",
+    "regionLabel": "Region",
+    "showingCount": "{n} places in view",
+    "emptyList": "No places in this view.",
+    "zoomForList": "Zoom in to see the place list."
   },
   "museums": {
     "heading": "Museums",
