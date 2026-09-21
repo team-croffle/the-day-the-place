@@ -82,6 +82,7 @@ describe('listTourPlaces', () => {
     expect(urls.every((url) => !url.includes('locationBasedList2'))).toBe(true);
     expect(urls.some((url) => url.includes('cat2=A0201'))).toBe(true);
     expect(urls.some((url) => url.includes('cat2=A0206'))).toBe(true);
+    expect(urls.some((url) => url.includes('lclsSystm3=VE070100'))).toBe(true);
   });
 
   it('stays on locationBasedList2 when the view fits in 20km', async () => {

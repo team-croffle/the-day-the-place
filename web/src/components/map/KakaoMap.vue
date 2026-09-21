@@ -25,6 +25,7 @@ const container = ref<HTMLElement | null>(null);
 let maps: KakaoMapsNamespace | null = null;
 let map: KakaoMapInstance | null = null;
 let idleTimer: ReturnType<typeof setTimeout> | null = null;
+let resizeObserver: ResizeObserver | null = null;
 
 function readView(): { bbox: MapPlacesQuery; level: number } | null {
   if (!map) {
@@ -73,6 +74,10 @@ onMounted(async () => {
   map = new maps.Map(container.value, { center, level: props.level });
   maps.event.addListener(map, 'idle', onIdle);
   maps.event.addListener(map, 'zoom_changed', onZoomChanged);
+  resizeObserver = new ResizeObserver(() => {
+    map?.relayout();
+  });
+  resizeObserver.observe(container.value);
   emit('ready', map);
   requestAnimationFrame(() => {
     map?.relayout();
@@ -94,6 +99,8 @@ onBeforeUnmount(() => {
   if (idleTimer) {
     clearTimeout(idleTimer);
   }
+  resizeObserver?.disconnect();
+  resizeObserver = null;
   if (map && maps) {
     maps.event.removeListener(map, 'idle', onIdle);
     maps.event.removeListener(map, 'zoom_changed', onZoomChanged);

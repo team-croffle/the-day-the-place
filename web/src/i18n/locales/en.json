@@ -47,9 +47,11 @@
     "kindMuseum": "Museums",
     "kindSite": "Sites",
     "regionLabel": "Region",
-    "showingCount": "{n} places in view",
-    "emptyList": "No places in this view.",
-    "zoomForList": "Zoom in to see the place list."
+    "showingCount": "{n} places",
+    "emptyList": "No places in this region.",
+    "emptySearch": "No places match this search.",
+    "previewClose": "Close",
+    "nearby": "Nearby"
   },
   "museums": {
     "heading": "Museums",

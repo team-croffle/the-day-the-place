@@ -59,3 +59,20 @@ export function placeMatchesQuery(place: PlaceSummary, raw: string): boolean {
     value.toLowerCase().includes(query),
   );
 }
+
+/** 근처 카드용. 같은 지점은 빼고 가까운 순. */
+export function nearestPlaces(
+  origin: PlaceSummary,
+  pool: readonly PlaceSummary[],
+  limit: number,
+): PlaceSummary[] {
+  return pool
+    .filter((place) => place.globalId !== origin.globalId)
+    .map((place) => ({
+      place,
+      dist: (place.lat - origin.lat) ** 2 + (place.lng - origin.lng) ** 2,
+    }))
+    .toSorted((a, b) => a.dist - b.dist)
+    .slice(0, limit)
+    .map((entry) => entry.place);
+}

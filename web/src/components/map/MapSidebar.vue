@@ -17,7 +17,7 @@ defineProps<{
   items: PlaceSummary[];
   count: number;
   selectedId: string | null;
-  zoomedOut: boolean;
+  searching: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -91,16 +91,13 @@ function toggleKind(kind: PlaceKind): void {
       </div>
     </div>
 
-    <p v-if="zoomedOut" class="text-muted px-4 py-3 text-xs">
-      {{ t('map.zoomForList') }}
-    </p>
-    <p v-else class="text-muted shrink-0 px-4 py-2 text-xs">
+    <p class="text-muted shrink-0 px-4 py-2 text-xs">
       {{ t('map.showingCount', { n: count }) }}
     </p>
 
-    <ul v-if="!zoomedOut" class="min-h-0 flex-1 overflow-y-auto">
+    <ul class="min-h-0 flex-1 overflow-y-auto">
       <li v-if="items.length === 0" class="text-muted px-4 py-6 text-sm">
-        {{ t('map.emptyList') }}
+        {{ searching ? t('map.emptySearch') : t('map.emptyList') }}
       </li>
       <li v-for="place in items" :key="place.globalId">
         <button

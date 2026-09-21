@@ -11,6 +11,9 @@ export interface TourListItem {
   cat1?: string;
   cat2?: string;
   cat3?: string;
+  lclsSystm1?: string;
+  lclsSystm2?: string;
+  lclsSystm3?: string;
   overview?: string;
   tel?: string;
 }

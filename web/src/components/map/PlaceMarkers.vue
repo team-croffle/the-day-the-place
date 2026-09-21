@@ -24,8 +24,8 @@ const props = defineProps<{
   hidden?: boolean;
 }>();
 
-type Pin = { latlng: KakaoLatLng; kind: PlaceKind };
-type ScreenPin = { x: number; y: number; kind: PlaceKind };
+type Pin = { latlng: KakaoLatLng; kind: PlaceKind; place: PlaceSummary };
+type ScreenPin = { x: number; y: number; kind: PlaceKind; place: PlaceSummary };
 
 /** 줌 중에는 지도 투영이 이미 최종값이라, 최종 좌표를 기준점 기준으로 되돌려 그린다. */
 type ZoomAnim = {
@@ -38,6 +38,11 @@ type ZoomAnim = {
   pins: ScreenPin[] | null;
   widths: number[];
 };
+
+const emit = defineEmits<{
+  select: [place: PlaceSummary];
+  clear: [];
+}>();
 
 const canvas = document.createElement('canvas');
 canvas.style.cssText = 'position:absolute;left:0;top:0;z-index:2;pointer-events:none;';
@@ -82,7 +87,7 @@ function screenPins(map: KakaoMapInstance): ScreenPin[] {
   const projection = map.getProjection();
   return pins.map((pin) => {
     const point = projection.containerPointFromCoords(pin.latlng);
-    return { x: point.x, y: point.y, kind: pin.kind };
+    return { x: point.x, y: point.y, kind: pin.kind, place: pin.place };
   });
 }
 
@@ -251,6 +256,37 @@ function endZoom(): void {
   paint();
 }
 
+function pinAt(x: number, y: number, map: KakaoMapInstance): PlaceSummary | null {
+  const drawn = screenPins(map);
+  const pad = 4;
+  for (let i = drawn.length - 1; i >= 0; i -= 1) {
+    const pin = drawn[i];
+    if (!pin) {
+      continue;
+    }
+    const hitX = x >= pin.x - PIN_W / 2 - pad && x <= pin.x + PIN_W / 2 + pad;
+    const hitY = y >= pin.y - PIN_H - pad && y <= pin.y + pad;
+    if (hitX && hitY) {
+      return pin.place;
+    }
+  }
+  return null;
+}
+
+function onMapClick(event?: { latLng: KakaoLatLng }): void {
+  const map = mapRef;
+  if (!map || !event?.latLng || props.hidden) {
+    return;
+  }
+  const point = map.getProjection().containerPointFromCoords(event.latLng);
+  const hit = pinAt(point.x, point.y, map);
+  if (hit) {
+    emit('select', hit);
+    return;
+  }
+  emit('clear');
+}
+
 function unbindMap(): void {
   resizeObserver?.disconnect();
   resizeObserver = null;
@@ -260,6 +296,7 @@ function unbindMap(): void {
     }
     mapsRef.event.removeListener(mapRef, 'zoom_start', onZoomStart);
     mapsRef.event.removeListener(mapRef, 'zoom_changed', endZoom);
+    mapsRef.event.removeListener(mapRef, 'click', onMapClick);
   }
   canvas.remove();
   mapsRef = null;
@@ -282,6 +319,7 @@ function bindMap(map: KakaoMapInstance | null): void {
   }
   mapsRef.event.addListener(mapRef, 'zoom_start', onZoomStart);
   mapsRef.event.addListener(mapRef, 'zoom_changed', endZoom);
+  mapsRef.event.addListener(mapRef, 'click', onMapClick);
   resizeObserver = new ResizeObserver(() => schedulePaint());
   resizeObserver.observe(mapRef.getNode());
   // 목록이 카카오 SDK보다 먼저 오면 rebuildPins가 빈 배열로 끝난다. 지도가 붙은 뒤 다시 만든다.
@@ -298,6 +336,7 @@ function rebuildPins(): void {
   pins = props.places.map((place) => ({
     latlng: new maps.LatLng(place.lat, place.lng),
     kind: place.kind,
+    place,
   }));
   if (zoomAnim) {
     zoomAnim.pins = mapRef ? screenPins(mapRef) : null;

@@ -12,6 +12,23 @@
   --color-line: #e7e0d4;
 }
 
+@layer components {
+  .map-preview-shell {
+    width: min(20rem, 85vw);
+  }
+
+  .map-preview-enter-active,
+  .map-preview-leave-active {
+    overflow: hidden;
+    transition: width 280ms ease;
+  }
+
+  .map-preview-enter-from,
+  .map-preview-leave-to {
+    width: 0;
+  }
+}
+
 @layer base {
   html {
     color-scheme: light;

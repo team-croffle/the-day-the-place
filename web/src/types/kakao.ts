@@ -29,6 +29,10 @@ export interface KakaoMapInstance {
   relayout(): void;
 }
 
+export interface KakaoMouseEvent {
+  latLng: KakaoLatLng;
+}
+
 export interface KakaoMapsNamespace {
   load: (callback: () => void) => void;
   LatLng: new (lat: number, lng: number) => KakaoLatLng;
@@ -38,8 +42,12 @@ export interface KakaoMapsNamespace {
     options: { center: KakaoLatLng; level: number },
   ) => KakaoMapInstance;
   event: {
-    addListener: (target: object, type: string, handler: () => void) => void;
-    removeListener: (target: object, type: string, handler: () => void) => void;
+    addListener: (target: object, type: string, handler: (event?: KakaoMouseEvent) => void) => void;
+    removeListener: (
+      target: object,
+      type: string,
+      handler: (event?: KakaoMouseEvent) => void,
+    ) => void;
   };
 }
 

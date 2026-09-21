@@ -47,9 +47,11 @@
     "kindMuseum": "박물관",
     "kindSite": "유적지",
     "regionLabel": "지역",
-    "showingCount": "{n}곳 표시 중",
-    "emptyList": "이 화면에 해당하는 장소가 없습니다.",
-    "zoomForList": "지도를 확대하면 장소 목록이 나옵니다."
+    "showingCount": "{n}곳",
+    "emptyList": "이 지역에 해당하는 장소가 없습니다.",
+    "emptySearch": "검색과 맞는 장소가 없습니다.",
+    "previewClose": "닫기",
+    "nearby": "근처 장소"
   },
   "museums": {
     "heading": "박물관",
