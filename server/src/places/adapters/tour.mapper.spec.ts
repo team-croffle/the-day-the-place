@@ -96,6 +96,28 @@ describe('toTourPlaceSummary', () => {
     expect(toTourPlaceSummary(cinema)).toBeNull();
   });
 
+  it('keeps a museum that only has the new lcls codes', () => {
+    const place = toTourPlaceSummary({
+      contentid: '129703',
+      contenttypeid: '14',
+      title: '국립중앙박물관',
+      addr1: '서울특별시 용산구 서빙고로 137',
+      mapx: '126.979',
+      mapy: '37.521',
+      cat1: '',
+      cat2: '',
+      cat3: '',
+      lclsSystm1: 'VE',
+      lclsSystm2: 'VE07',
+      lclsSystm3: 'VE070100',
+    });
+    expect(place).toMatchObject({
+      kind: 'museum',
+      name: '국립중앙박물관',
+      category: '박물관',
+    });
+  });
+
   it('drops rows without coordinates', () => {
     expect(toTourPlaceSummary({ ...museum, mapx: '', mapy: '' })).toBeNull();
   });

@@ -108,6 +108,32 @@ export const TOUR_MAP_MUSEUM_CAT3: readonly string[] = [
   TOUR_CAT3_MUSEUM_KIND.exhibition,
 ];
 
+/** KorService2 새 분류. 옛 cat1/2/3·areaCode가 빈 장소가 여기로 옮겨 있다. */
+export const TOUR_LCLS_MUSEUM = {
+  museum: 'VE070100',
+  memorial: 'VE070200',
+  exhibition: 'VE070300',
+} as const;
+
+export const TOUR_LCLS_GALLERY = 'VE070600';
+export const TOUR_LCLS_HISTORY = 'HS01';
+export const TOUR_LCLS_RELIGIOUS = 'HS03';
+
+export const TOUR_MAP_MUSEUM_LCLS3: readonly string[] = [
+  TOUR_LCLS_MUSEUM.museum,
+  TOUR_LCLS_MUSEUM.memorial,
+  TOUR_LCLS_MUSEUM.exhibition,
+];
+
+/** 전국 한 번에 긁는 새 분류 조회. areaCode가 빈 국립중앙박물관 같은 곳을 살린다. */
+export const TOUR_MAP_LCLS_QUERIES = [
+  { lclsSystm1: 'VE', lclsSystm2: 'VE07', lclsSystm3: TOUR_LCLS_MUSEUM.museum },
+  { lclsSystm1: 'VE', lclsSystm2: 'VE07', lclsSystm3: TOUR_LCLS_MUSEUM.memorial },
+  { lclsSystm1: 'VE', lclsSystm2: 'VE07', lclsSystm3: TOUR_LCLS_MUSEUM.exhibition },
+  { lclsSystm1: 'HS', lclsSystm2: TOUR_LCLS_HISTORY },
+  { lclsSystm1: 'HS', lclsSystm2: TOUR_LCLS_RELIGIOUS },
+] as const;
+
 /** 국가유산 지정종목(ccbaKdcd). v0.2 상세 보강용. 지도 핀에는 안 씀. */
 export const HERITAGE_KIND_CODES = {
   nationalTreasure: '11',
@@ -122,20 +148,31 @@ export interface TourCategoryInput {
   contentTypeId?: string;
   cat2?: string;
   cat3?: string;
+  lclsSystm2?: string;
+  lclsSystm3?: string;
+}
+
+function isMuseumKind(input: TourCategoryInput): boolean {
+  return (
+    (!!input.cat3 && TOUR_MAP_MUSEUM_CAT3.includes(input.cat3)) ||
+    (!!input.lclsSystm3 && TOUR_MAP_MUSEUM_LCLS3.includes(input.lclsSystm3))
+  );
 }
 
 /** 로드맵: 박물관·기념관·전시관 + 역사관광지만 지도에 넣는다. */
 export function isTourMapPlace(input: TourCategoryInput): boolean {
-  if (input.cat3 === TOUR_CAT3_ART_GALLERY) {
+  if (input.cat3 === TOUR_CAT3_ART_GALLERY || input.lclsSystm3 === TOUR_LCLS_GALLERY) {
     return false;
   }
-  if (input.cat3 && TOUR_MAP_MUSEUM_CAT3.includes(input.cat3)) {
+  if (isMuseumKind(input)) {
     return true;
   }
   if (
     input.cat2 === TOUR_CAT2_HISTORY ||
     input.cat2?.startsWith(TOUR_CAT2_HISTORY) ||
-    input.cat3?.startsWith(TOUR_CAT2_HISTORY)
+    input.cat3?.startsWith(TOUR_CAT2_HISTORY) ||
+    input.lclsSystm2 === TOUR_LCLS_HISTORY ||
+    input.lclsSystm2 === TOUR_LCLS_RELIGIOUS
   ) {
     return true;
   }
@@ -151,7 +188,7 @@ export function inferPlaceKind(
   if (!isTourMapPlace(input)) {
     return null;
   }
-  if (input.cat3 && TOUR_MAP_MUSEUM_CAT3.includes(input.cat3)) {
+  if (isMuseumKind(input)) {
     return 'museum';
   }
   return 'site';

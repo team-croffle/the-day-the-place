@@ -1,6 +1,7 @@
 import {
   TOUR_CAT2_HISTORY,
   TOUR_CONTENT_TYPE,
+  TOUR_MAP_LCLS_QUERIES,
   type MapPlacesQuery,
   type PlaceSummary,
 } from '@nest-vue/shared';
@@ -82,14 +83,15 @@ async function listByAreas(
   if (areaCodes.length === 0) {
     return listByLocation(query, options, fetchImpl);
   }
-  const jobs = areaCodes.flatMap((areaCode) => [
-    { areaCode, contentTypeId: TOUR_CONTENT_TYPE.culture, cat2: TOUR_CAT2_CULTURE },
-    { areaCode, contentTypeId: TOUR_CONTENT_TYPE.attraction, cat2: TOUR_CAT2_HISTORY },
-  ]);
+  const jobs: TourAreaQuery[] = [
+    ...areaCodes.flatMap((areaCode) => [
+      { areaCode, contentTypeId: TOUR_CONTENT_TYPE.culture, cat2: TOUR_CAT2_CULTURE },
+      { areaCode, contentTypeId: TOUR_CONTENT_TYPE.attraction, cat2: TOUR_CAT2_HISTORY },
+    ]),
+    ...TOUR_MAP_LCLS_QUERIES,
+  ];
   return collectSettled(
-    await mapInBatches(jobs, CELL_BATCH, (job) =>
-      fetchArea(job.areaCode, job.contentTypeId, job.cat2, options, fetchImpl),
-    ),
+    await mapInBatches(jobs, CELL_BATCH, (job) => fetchArea(job, options, fetchImpl)),
   );
 }
 
@@ -160,31 +162,38 @@ async function fetchList(params: {
   return page.items;
 }
 
+type TourAreaQuery = {
+  areaCode?: string;
+  contentTypeId?: string;
+  cat2?: string;
+  lclsSystm1?: string;
+  lclsSystm2?: string;
+  lclsSystm3?: string;
+};
+
+function areaQueryParams(query: TourAreaQuery, pageNo: string): Record<string, string> {
+  const extra: Record<string, string> = { pageNo };
+  for (const [key, value] of Object.entries(query)) {
+    if (value) {
+      extra[key] = value;
+    }
+  }
+  return extra;
+}
+
 async function fetchArea(
-  areaCode: string,
-  contentTypeId: string,
-  cat2: string,
+  query: TourAreaQuery,
   options: TourListOptions,
   fetchImpl: TourFetch,
 ): Promise<TourListItem[]> {
-  const first = await tourGet(
-    AREA_LIST_PATH,
-    { areaCode, contentTypeId, cat2, pageNo: '1' },
-    options,
-    fetchImpl,
-  );
+  const first = await tourGet(AREA_LIST_PATH, areaQueryParams(query, '1'), options, fetchImpl);
   const pages = Math.min(MAX_AREA_PAGES, Math.max(1, Math.ceil(first.totalCount / NUM_OF_ROWS)));
   if (pages <= 1) {
     return first.items;
   }
   const rest = await Promise.all(
     Array.from({ length: pages - 1 }, (_, index) =>
-      tourGet(
-        AREA_LIST_PATH,
-        { areaCode, contentTypeId, cat2, pageNo: String(index + 2) },
-        options,
-        fetchImpl,
-      ),
+      tourGet(AREA_LIST_PATH, areaQueryParams(query, String(index + 2)), options, fetchImpl),
     ),
   );
   return [...first.items, ...rest.flatMap((page) => page.items)];

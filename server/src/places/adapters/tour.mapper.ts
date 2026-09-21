@@ -2,6 +2,7 @@ import {
   inferPlaceKind,
   toPlaceGlobalId,
   TOUR_CAT3_MUSEUM_KIND,
+  TOUR_LCLS_MUSEUM,
   type PlaceSummary,
 } from '@nest-vue/shared';
 
@@ -13,11 +14,19 @@ const CAT3_LABEL: Record<string, string> = {
   [TOUR_CAT3_MUSEUM_KIND.exhibition]: '전시관',
 };
 
+const LCLS_LABEL: Record<string, string> = {
+  [TOUR_LCLS_MUSEUM.museum]: '박물관',
+  [TOUR_LCLS_MUSEUM.memorial]: '기념관',
+  [TOUR_LCLS_MUSEUM.exhibition]: '전시관',
+};
+
 export function toTourPlaceSummary(item: TourListItem): PlaceSummary | null {
   const kind = inferPlaceKind({
     contentTypeId: item.contenttypeid,
     cat2: item.cat2,
     cat3: item.cat3,
+    lclsSystm2: item.lclsSystm2,
+    lclsSystm3: item.lclsSystm3,
   });
   if (!kind) {
     return null;
@@ -43,7 +52,10 @@ export function toTourPlaceSummary(item: TourListItem): PlaceSummary | null {
     lat,
     lng,
     address,
-    category: CAT3_LABEL[item.cat3 ?? ''] ?? (kind === 'site' ? '역사관광지' : (item.cat3 ?? '')),
+    category:
+      CAT3_LABEL[item.cat3 ?? ''] ??
+      LCLS_LABEL[item.lclsSystm3 ?? ''] ??
+      (kind === 'site' ? '역사관광지' : item.cat3 || item.lclsSystm3 || ''),
     summary: item.overview?.trim() ?? '',
     image,
   };
