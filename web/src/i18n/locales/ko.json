@@ -40,7 +40,16 @@
     "missingKey": "카카오맵 키가 없습니다. web/.env 의 VITE_KAKAO_MAP_KEY 를 확인하세요.",
     "sdkError": "지도를 불러오지 못했습니다.",
     "fetchError": "장소를 불러오지 못했습니다. 이전 마커를 유지합니다.",
-    "loading": "장소를 불러오는 중…"
+    "loading": "장소를 불러오는 중…",
+    "exploreEyebrow": "지도 탐색",
+    "exploreTitle": "역사 지도",
+    "searchPlaceholder": "장소, 지역, 시대 검색…",
+    "kindMuseum": "박물관",
+    "kindSite": "유적지",
+    "regionLabel": "지역",
+    "showingCount": "{n}곳 표시 중",
+    "emptyList": "이 화면에 해당하는 장소가 없습니다.",
+    "zoomForList": "지도를 확대하면 장소 목록이 나옵니다."
   },
   "museums": {
     "heading": "박물관",
