@@ -59,6 +59,67 @@ function onZoomChanged(): void {
   emit('zoom', map.getLevel());
 }
 
+function measureHost(): { width: number; height: number } {
+  const pane = container.value?.parentElement;
+  const width =
+    pane && pane.clientWidth > 0 ? pane.clientWidth : Math.max(window.innerWidth - 320, 1);
+  let height = pane?.clientHeight ?? 0;
+  if (height < 1) {
+    let node: HTMLElement | null = pane?.parentElement ?? null;
+    while (node && height < 1) {
+      height = node.clientHeight;
+      node = node.parentElement;
+    }
+  }
+  if (height < 1) {
+    height = Math.max(window.innerHeight - 64, 1);
+  }
+  return { width, height };
+}
+
+function syncBox(): boolean {
+  const el = container.value;
+  if (!el) {
+    return false;
+  }
+  const box = measureHost();
+  el.style.width = `${box.width}px`;
+  el.style.height = `${box.height}px`;
+  return true;
+}
+
+function createMap(): void {
+  const el = container.value;
+  if (map || !maps || !el || !syncBox()) {
+    return;
+  }
+  const center = new maps.LatLng(props.lat, props.lng);
+  map = new maps.Map(el, { center, level: props.level });
+  maps.event.addListener(map, 'idle', onIdle);
+  maps.event.addListener(map, 'zoom_changed', onZoomChanged);
+  emit('ready', map);
+  map.relayout();
+  requestAnimationFrame(onIdle);
+}
+
+let relayoutRaf = 0;
+
+function scheduleRelayout(): void {
+  if (relayoutRaf) {
+    return;
+  }
+  relayoutRaf = requestAnimationFrame(() => {
+    relayoutRaf = 0;
+    if (!map) {
+      createMap();
+      return;
+    }
+    if (syncBox()) {
+      map.relayout();
+    }
+  });
+}
+
 onMounted(async () => {
   if (!container.value) {
     return;
@@ -70,19 +131,18 @@ onMounted(async () => {
     return;
   }
 
-  const center = new maps.LatLng(props.lat, props.lng);
-  map = new maps.Map(container.value, { center, level: props.level });
-  maps.event.addListener(map, 'idle', onIdle);
-  maps.event.addListener(map, 'zoom_changed', onZoomChanged);
+  const pane = container.value.parentElement;
+  const row = pane?.parentElement;
   resizeObserver = new ResizeObserver(() => {
-    map?.relayout();
+    scheduleRelayout();
   });
-  resizeObserver.observe(container.value);
-  emit('ready', map);
-  requestAnimationFrame(() => {
-    map?.relayout();
-    requestAnimationFrame(onIdle);
-  });
+  if (pane) {
+    resizeObserver.observe(pane);
+  }
+  if (row) {
+    resizeObserver.observe(row);
+  }
+  createMap();
 });
 
 watch(
@@ -98,6 +158,10 @@ watch(
 onBeforeUnmount(() => {
   if (idleTimer) {
     clearTimeout(idleTimer);
+  }
+  if (relayoutRaf) {
+    cancelAnimationFrame(relayoutRaf);
+    relayoutRaf = 0;
   }
   resizeObserver?.disconnect();
   resizeObserver = null;

@@ -41,6 +41,7 @@
     "sdkError": "지도를 불러오지 못했습니다.",
     "fetchError": "장소를 불러오지 못했습니다. 이전 마커를 유지합니다.",
     "loading": "장소를 불러오는 중…",
+    "mapLoading": "지도를 불러오는 중…",
     "exploreEyebrow": "지도 탐색",
     "exploreTitle": "역사 지도",
     "searchPlaceholder": "장소, 지역, 시대 검색…",

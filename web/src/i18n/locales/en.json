@@ -41,6 +41,7 @@
     "sdkError": "Could not load the map.",
     "fetchError": "Could not load places. Existing markers are kept.",
     "loading": "Loading places…",
+    "mapLoading": "Loading map…",
     "exploreEyebrow": "Explore",
     "exploreTitle": "History map",
     "searchPlaceholder": "Search place, region, era…",

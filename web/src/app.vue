@@ -11,8 +11,8 @@ const isMap = computed(() => route.path === '/map' || route.path.startsWith('/ma
 
 <template>
   <div class="flex min-h-screen flex-col" :class="{ 'h-screen overflow-hidden': isMap }">
-    <AppHeader />
-    <main class="flex-1" :class="{ 'relative min-h-0': isMap }">
+    <AppHeader class="shrink-0" />
+    <main class="min-h-0 flex-1" :class="{ relative: isMap }">
       <RouterView />
     </main>
     <AppFooter v-if="!isMap" />

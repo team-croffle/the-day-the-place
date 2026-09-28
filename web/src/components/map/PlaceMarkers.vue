@@ -2,6 +2,7 @@
 import type { PlaceKind, PlaceSummary } from '@nest-vue/shared';
 import { onBeforeUnmount, toRaw, watch } from 'vue';
 
+import { isKakaoMapsReady } from '@/lib/kakaoMap';
 import type { KakaoLatLng, KakaoMapInstance, KakaoMapsNamespace } from '@/types/kakao';
 
 const PIN_W = 24;
@@ -84,11 +85,26 @@ function drawPin(ctx: CanvasRenderingContext2D, x: number, y: number, color: str
 }
 
 function screenPins(map: KakaoMapInstance): ScreenPin[] {
+  const bounds = map.getBounds();
+  const sw = bounds.getSouthWest();
+  const ne = bounds.getNorthEast();
+  const latPad = (ne.getLat() - sw.getLat()) * 0.08;
+  const lngPad = (ne.getLng() - sw.getLng()) * 0.08;
+  const minLat = sw.getLat() - latPad;
+  const maxLat = ne.getLat() + latPad;
+  const minLng = sw.getLng() - lngPad;
+  const maxLng = ne.getLng() + lngPad;
   const projection = map.getProjection();
-  return pins.map((pin) => {
+  const drawn: ScreenPin[] = [];
+  for (const pin of pins) {
+    const { lat, lng } = pin.place;
+    if (lat < minLat || lat > maxLat || lng < minLng || lng > maxLng) {
+      continue;
+    }
     const point = projection.containerPointFromCoords(pin.latlng);
-    return { x: point.x, y: point.y, kind: pin.kind, place: pin.place };
-  });
+    drawn.push({ x: point.x, y: point.y, kind: pin.kind, place: pin.place });
+  }
+  return drawn;
 }
 
 function paint(): void {
@@ -307,7 +323,7 @@ function bindMap(map: KakaoMapInstance | null): void {
   unbindMap();
 
   const maps = window.kakao?.maps;
-  mapsRef = maps ?? null;
+  mapsRef = isKakaoMapsReady(maps) ? maps : null;
   mapRef = map ? toRaw(map) : null;
   if (!mapRef || !mapsRef) {
     return;
@@ -327,7 +343,7 @@ function bindMap(map: KakaoMapInstance | null): void {
 }
 
 function rebuildPins(): void {
-  const maps = window.kakao?.maps;
+  const maps = mapsRef;
   if (!maps) {
     pins = [];
     schedulePaint();
