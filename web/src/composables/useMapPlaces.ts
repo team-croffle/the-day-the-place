@@ -4,7 +4,7 @@ import {
   type MapPlacesResponse,
   type PlaceSummary,
 } from '@nest-vue/shared';
-import { ref } from 'vue';
+import { ref, shallowRef } from 'vue';
 
 import { apiFetch } from '@/composables/useApi';
 
@@ -17,7 +17,7 @@ export const KOREA_MAP_BBOX: MapPlacesQuery = {
 };
 
 export function useMapPlaces() {
-  const places = ref<PlaceSummary[]>([]);
+  const places = shallowRef<PlaceSummary[]>([]);
   const error = ref<string | null>(null);
   const pending = ref(false);
   let inFlight: Promise<void> | null = null;

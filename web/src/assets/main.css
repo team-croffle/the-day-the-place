@@ -32,9 +32,14 @@
 @layer base {
   html {
     color-scheme: light;
+    height: 100%;
   }
 
   body {
-    @apply bg-cream text-ink antialiased;
+    @apply bg-cream text-ink h-full antialiased;
+  }
+
+  #app {
+    height: 100%;
   }
 }

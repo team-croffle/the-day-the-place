@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { MapPlacesQuery, PlaceKind, PlaceSummary } from '@nest-vue/shared';
-import { computed, markRaw, onMounted, ref, shallowRef, watch } from 'vue';
+import { computed, markRaw, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 import KakaoMap from '@/components/map/KakaoMap.vue';
@@ -10,6 +10,7 @@ import MapSidebar from '@/components/map/MapSidebar.vue';
 import PlaceMarkers from '@/components/map/PlaceMarkers.vue';
 import { resolveMapCenter, SEOUL_CENTER } from '@/composables/useGeolocation';
 import { useMapPlaces } from '@/composables/useMapPlaces';
+import { isKakaoMapsReady } from '@/lib/kakaoMap';
 import { MAP_REGION_VIEWS, nearestPlaces, placeInRegion, placeMatchesQuery } from '@/lib/mapRegion';
 import type { KakaoMapInstance } from '@/types/kakao';
 
@@ -17,15 +18,15 @@ const { t } = useI18n();
 const { places, error, pending, fetchAll } = useMapPlaces();
 
 const center = ref(SEOUL_CENTER);
-const centerReady = ref(false);
 const mapInstance = shallowRef<KakaoMapInstance | null>(null);
 const sdkError = ref<string | null>(null);
 const zoomLevel = ref(7);
 const query = ref('');
+const queryForFilter = ref('');
 const region = ref('all');
 const kinds = ref<Record<PlaceKind, boolean>>({ museum: true, site: true });
 const selectedId = ref<string | null>(null);
-const hasQuery = computed(() => query.value.trim().length > 0);
+const hasQuery = computed(() => queryForFilter.value.trim().length > 0);
 
 /** 완전 축소보다 두 단계 확대한 레벨부터 핀을 숨긴다. */
 const HIDE_MARKERS_FROM_LEVEL = 12;
@@ -36,7 +37,7 @@ const filteredPlaces = computed(() =>
     (place) =>
       kinds.value[place.kind] &&
       placeInRegion(place, region.value) &&
-      placeMatchesQuery(place, query.value),
+      placeMatchesQuery(place, queryForFilter.value),
   ),
 );
 
@@ -66,11 +67,26 @@ const markerPlaces = computed(() => {
 onMounted(async () => {
   void fetchAll();
   center.value = await resolveMapCenter();
-  centerReady.value = true;
 });
 
-watch(query, () => {
+let queryTimer: ReturnType<typeof setTimeout> | null = null;
+
+onBeforeUnmount(() => {
+  if (queryTimer) {
+    clearTimeout(queryTimer);
+    queryTimer = null;
+  }
+});
+
+watch(query, (value) => {
   selectedId.value = null;
+  if (queryTimer) {
+    clearTimeout(queryTimer);
+  }
+  queryTimer = setTimeout(() => {
+    queryForFilter.value = value;
+    queryTimer = null;
+  }, 180);
 });
 
 watch(filteredPlaces, (list) => {
@@ -90,6 +106,7 @@ watch(region, (code) => {
 });
 
 function onReady(map: KakaoMapInstance): void {
+  sdkError.value = null;
   mapInstance.value = markRaw(map);
   zoomLevel.value = map.getLevel();
 }
@@ -133,7 +150,7 @@ function onSelectFromList(place: PlaceSummary): void {
   }
   const map = mapInstance.value;
   const maps = window.kakao?.maps;
-  if (!map || !maps) {
+  if (!map || !isKakaoMapsReady(maps)) {
     return;
   }
   map.setCenter(new maps.LatLng(place.lat, place.lng));
@@ -145,7 +162,7 @@ function onClearSelect(): void {
 </script>
 
 <template>
-  <div class="bg-line absolute inset-0 flex">
+  <div class="bg-line absolute inset-0 flex min-h-0">
     <MapSidebar
       v-model:query="query"
       v-model:region="region"
@@ -156,12 +173,10 @@ function onClearSelect(): void {
       :searching="hasQuery"
       @select="onSelectFromList"
     />
-    <div class="relative min-w-0 flex-1">
+    <div class="relative h-full min-h-0 min-w-0 flex-1 overflow-hidden">
       <KakaoMap
-        v-if="centerReady"
         :lat="center.lat"
         :lng="center.lng"
-        class="h-full w-full"
         @ready="onReady"
         @idle="onIdle"
         @zoom="onZoom"
@@ -183,13 +198,19 @@ function onClearSelect(): void {
         {{ sdkError === 'missing_key' ? t('map.missingKey') : t('map.sdkError') }}
       </p>
       <p
+        v-else-if="!mapInstance"
+        class="bg-cream/90 text-muted pointer-events-none absolute inset-0 z-20 flex items-center justify-center px-6 text-center text-sm"
+      >
+        {{ t('map.mapLoading') }}
+      </p>
+      <p
         v-else-if="error"
         class="bg-ink text-paper pointer-events-none absolute top-4 left-1/2 z-20 -translate-x-1/2 rounded-sm px-3 py-2 text-xs"
       >
         {{ t('map.fetchError') }}
       </p>
       <p
-        v-else-if="!centerReady || (pending && places.length === 0)"
+        v-else-if="pending && places.length === 0"
         class="bg-ink/80 text-paper pointer-events-none absolute top-4 left-1/2 z-20 -translate-x-1/2 rounded-sm px-3 py-2 text-xs"
       >
         {{ t('map.loading') }}

@@ -3,6 +3,7 @@ import { PLACE_KIND_LABELS, type PlaceKind, type PlaceSummary } from '@nest-vue/
 import { onBeforeUnmount, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 
+import { isKakaoMapsReady } from '@/lib/kakaoMap';
 import type { KakaoMapInstance } from '@/types/kakao';
 
 const PIN_H = 32;
@@ -23,7 +24,7 @@ function kindLabel(kind: PlaceKind): string {
 function update(): void {
   const map = props.map;
   const maps = window.kakao?.maps;
-  if (!map || !maps) {
+  if (!map || !isKakaoMapsReady(maps)) {
     pos.value = null;
     return;
   }
@@ -35,7 +36,7 @@ function update(): void {
 
 function bind(map: KakaoMapInstance | null): void {
   const maps = window.kakao?.maps;
-  if (!maps) {
+  if (!isKakaoMapsReady(maps)) {
     return;
   }
   for (const type of MAP_EVENTS) {
@@ -47,7 +48,7 @@ function bind(map: KakaoMapInstance | null): void {
 
 function unbind(map: KakaoMapInstance | null): void {
   const maps = window.kakao?.maps;
-  if (!maps || !map) {
+  if (!isKakaoMapsReady(maps) || !map) {
     return;
   }
   for (const type of MAP_EVENTS) {
