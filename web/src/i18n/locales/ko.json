@@ -54,13 +54,47 @@
     "previewClose": "닫기",
     "nearby": "근처 장소"
   },
+  "places": {
+    "home": "홈",
+    "search": "검색",
+    "searchPlaceholder": "이름, 주소 검색…",
+    "allCategories": "전체",
+    "count": "{n}곳",
+    "loading": "불러오는 중…",
+    "empty": "조건에 맞는 장소가 없습니다.",
+    "prev": "이전",
+    "next": "다음",
+    "save": "저장",
+    "directionsCta": "길찾기",
+    "backToList": "목록으로",
+    "notFound": "장소를 찾지 못했습니다.",
+    "noIntro": "등록된 소개가 없습니다.",
+    "noVisit": "등록된 관람 안내가 없습니다.",
+    "hours": "이용시간",
+    "fee": "요금",
+    "tel": "전화",
+    "facts": "기본 정보",
+    "exhibitionsLater": "이 장소의 전시는 이후 버전에서 붙입니다.",
+    "heritageLater": "국가유산 지정 현황은 아직 붙이지 않았습니다.",
+    "detailCta": "상세 정보 보기",
+    "tab": {
+      "intro": "소개",
+      "visit": "관람안내",
+      "directions": "찾아오기",
+      "exhibitions": "전시"
+    }
+  },
   "museums": {
     "heading": "박물관",
-    "body": "목록과 상세는 v0.2에서 채웁니다."
+    "body": "목록과 상세는 v0.2에서 채웁니다.",
+    "heroTitle": "전국 박물관",
+    "heroBody": "박물관, 기념관, 전시관을 찾습니다."
   },
   "sites": {
     "heading": "유적지",
-    "body": "목록과 상세는 v0.2에서 채웁니다."
+    "body": "목록과 상세는 v0.2에서 채웁니다.",
+    "heroTitle": "역사 유적지",
+    "heroBody": "역사 관광지를 찾습니다."
   },
   "exhibitions": {
     "heading": "특별전",

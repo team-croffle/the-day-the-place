@@ -1,7 +1,14 @@
 <script setup lang="ts">
-import PageStub from '@/components/PageStub.vue';
+import PlaceListView from '@/components/places/PlaceListView.vue';
+
+const categories = ['박물관', '기념관', '전시관'] as const;
 </script>
 
 <template>
-  <PageStub title-key="museums.heading" body-key="museums.body" />
+  <PlaceListView
+    kind="museum"
+    title-key="museums.heroTitle"
+    body-key="museums.heroBody"
+    :categories="categories"
+  />
 </template>
