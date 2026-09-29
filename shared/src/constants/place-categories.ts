@@ -1,4 +1,4 @@
-import type { PlaceKind, PlaceSource } from '../types/place';
+import type { MapPlacesQuery, PlaceKind, PlaceSource } from '../types/place';
 
 export const PLACE_KIND_LABELS: Record<PlaceKind, { ko: string; en: string }> = {
   museum: { ko: '박물관', en: 'Museum' },
@@ -177,6 +177,39 @@ export function isTourMapPlace(input: TourCategoryInput): boolean {
     return true;
   }
   return false;
+}
+
+/** 지도·목록이 같이 쓰는 전국 범위. 서버 bbox 상한(8°) 안. */
+export const KOREA_PLACES_BBOX: MapPlacesQuery = {
+  swLat: 33,
+  swLng: 124.5,
+  neLat: 38.9,
+  neLng: 132,
+};
+
+/** 칩 한글 약칭이 주소 표기(전라북도 등)와 안 맞아서 별칭으로 본다. */
+const REGION_ADDRESS_ALIASES: Record<string, readonly string[]> = {
+  '11': ['서울'],
+  '31': ['경기'],
+  '32': ['강원'],
+  '33': ['충북', '충청북'],
+  '34': ['충남', '충청남'],
+  '35': ['전북', '전라북'],
+  '36': ['전남', '전라남'],
+  '37': ['경북', '경상북'],
+  '38': ['경남', '경상남'],
+  '39': ['제주'],
+};
+
+export function placeAddressInRegion(address: string, code: string): boolean {
+  if (code === 'all') {
+    return true;
+  }
+  const aliases = REGION_ADDRESS_ALIASES[code];
+  if (!aliases) {
+    return true;
+  }
+  return aliases.some((alias) => address.includes(alias));
 }
 
 export function inferPlaceKind(

@@ -3,6 +3,7 @@ import {
   toPlaceGlobalId,
   TOUR_CAT3_MUSEUM_KIND,
   TOUR_LCLS_MUSEUM,
+  type PlaceDetail,
   type PlaceSummary,
 } from '@nest-vue/shared';
 
@@ -58,6 +59,21 @@ export function toTourPlaceSummary(item: TourListItem): PlaceSummary | null {
       (kind === 'site' ? '역사관광지' : item.cat3 || item.lclsSystm3 || ''),
     summary: item.overview?.trim() ?? '',
     image,
+  };
+}
+
+/** 목록과 같은 장소만 상세로 올린다. 미술관·좌표 없음은 null. */
+export function toTourPlaceDetail(item: TourListItem): PlaceDetail | null {
+  const summary = toTourPlaceSummary(item);
+  if (!summary) {
+    return null;
+  }
+  const description = item.overview?.trim();
+  const tel = item.tel?.trim();
+  return {
+    ...summary,
+    ...(description ? { description } : {}),
+    ...(tel ? { tel } : {}),
   };
 }
 

@@ -43,6 +43,27 @@ export interface MapPlacesResponse {
   heritage: PlaceSourceResult;
 }
 
+/** 목록 검색. 시대(`era`)는 Tour에 없어서 아직 받지 않는다. */
+export interface PlaceSearchQuery {
+  kind: PlaceKind;
+  q?: string;
+  region?: string;
+  category?: string;
+  page?: number;
+  size?: number;
+}
+
+export type PlaceSearchResult =
+  | {
+      ok: true;
+      items: PlaceSummary[];
+      page: number;
+      size: number;
+      total: number;
+      totalPages: number;
+    }
+  | { ok: false; error: string; items: null };
+
 export function toPlaceGlobalId(source: PlaceSource, id: string): string {
   return `${source}:${id}`;
 }

@@ -49,6 +49,16 @@ export async function listTourPlaces(
   return toUniqueInBbox(raw, query);
 }
 
+/** 상세 공통정보 한 번. 없으면 null. 실패는 던진다. */
+export async function getTourPlace(
+  contentId: string,
+  options: TourListOptions,
+): Promise<TourListItem | null> {
+  const fetchImpl = options.fetchImpl ?? fetch;
+  const { items } = await tourGet('detailCommon2', { contentId }, options, fetchImpl);
+  return items[0] ?? null;
+}
+
 function toUniqueInBbox(raw: TourListItem[], query: MapPlacesQuery): PlaceSummary[] {
   const seen = new Set<string>();
   const items: PlaceSummary[] = [];

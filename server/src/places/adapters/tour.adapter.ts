@@ -1,8 +1,9 @@
-import type { MapPlacesQuery, PlaceSummary } from '@nest-vue/shared';
+import type { MapPlacesQuery, PlaceDetail, PlaceSummary } from '@nest-vue/shared';
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
-import { listTourPlaces, TOUR_API_DEFAULT_BASE } from './tour.client';
+import { getTourPlace, listTourPlaces, TOUR_API_DEFAULT_BASE } from './tour.client';
+import { toTourPlaceDetail } from './tour.mapper';
 
 /** 장소 목록은 분 단위로 안 바뀐다. Nest가 떠 있는 동안 Tour를 하루 한 번만 긁는다. */
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
@@ -41,6 +42,17 @@ export class TourAdapter {
     const request = this.fetchAndCache(query, key);
     inflight.set(key, request);
     return request;
+  }
+
+  async getByContentId(contentId: string): Promise<PlaceDetail | null> {
+    const item = await getTourPlace(contentId, {
+      apiKey: this.config.get<string>('TOUR_API_KEY', ''),
+      baseUrl: this.config.get<string>('TOUR_API_BASE_URL', TOUR_API_DEFAULT_BASE),
+    });
+    if (!item) {
+      return null;
+    }
+    return toTourPlaceDetail(item);
   }
 
   private async fetchAndCache(query: MapPlacesQuery, key: string): Promise<PlaceSummary[]> {

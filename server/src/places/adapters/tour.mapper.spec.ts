@@ -1,4 +1,4 @@
-import { toTourPlaceSummary, unwrapTourItems } from './tour.mapper';
+import { toTourPlaceDetail, toTourPlaceSummary, unwrapTourItems } from './tour.mapper';
 import type { TourListItem } from './tour.types';
 
 const museum: TourListItem = {
@@ -120,6 +120,22 @@ describe('toTourPlaceSummary', () => {
 
   it('drops rows without coordinates', () => {
     expect(toTourPlaceSummary({ ...museum, mapx: '', mapy: '' })).toBeNull();
+  });
+});
+
+describe('toTourPlaceDetail', () => {
+  it('keeps overview and telephone on a map place', () => {
+    const detail = toTourPlaceDetail({ ...museum, tel: '02-000-0000' });
+    expect(detail).toMatchObject({
+      id: '100',
+      kind: 'museum',
+      description: '개요',
+      tel: '02-000-0000',
+    });
+  });
+
+  it('drops a gallery the map would not show', () => {
+    expect(toTourPlaceDetail(art)).toBeNull();
   });
 });
 
