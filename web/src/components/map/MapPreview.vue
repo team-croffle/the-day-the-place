@@ -2,6 +2,9 @@
 import { PLACE_KIND_LABELS, type PlaceKind, type PlaceSummary } from '@nest-vue/shared';
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { RouterLink } from 'vue-router';
+
+import { placeDetailPath } from '@/lib/placePath';
 
 const props = defineProps<{
   place: PlaceSummary;
@@ -51,6 +54,12 @@ const kindText = computed(() => kindLabel(props.place.kind));
       <p v-if="place.summary" class="text-muted mt-3 text-sm leading-relaxed">
         {{ place.summary }}
       </p>
+      <RouterLink
+        :to="placeDetailPath(place.kind, place.id)"
+        class="bg-gold text-ink hover:bg-gold-hover mt-4 inline-flex rounded-sm px-3 py-1.5 text-sm"
+      >
+        {{ t('places.detailCta') }}
+      </RouterLink>
 
       <section v-if="nearby.length > 0" class="mt-6">
         <h3 class="text-sm font-semibold">{{ t('map.nearby') }}</h3>
