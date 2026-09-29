@@ -75,6 +75,8 @@
     "tel": "Phone",
     "facts": "Details",
     "photos": "Photos",
+    "openPhoto": "View larger",
+    "closePhoto": "Close",
     "exhibitionsLater": "Exhibitions for this place come in a later version.",
     "heritageLater": "Heritage designations are not attached yet.",
     "detailCta": "View details",
