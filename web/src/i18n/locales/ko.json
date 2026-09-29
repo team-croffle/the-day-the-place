@@ -74,6 +74,8 @@
     "fee": "요금",
     "tel": "전화",
     "facts": "기본 정보",
+    "photos": "사진",
+    "photo": "사진 {n}",
     "exhibitionsLater": "이 장소의 전시는 이후 버전에서 붙입니다.",
     "heritageLater": "국가유산 지정 현황은 아직 붙이지 않았습니다.",
     "detailCta": "상세 정보 보기",

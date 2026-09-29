@@ -7,7 +7,9 @@ import {
   type PlaceSummary,
 } from '@nest-vue/shared';
 
-import type { TourIntro, TourListItem } from './tour.types';
+import type { TourImage, TourIntro, TourListItem } from './tour.types';
+
+const MAX_PLACE_IMAGES = 24;
 
 const CAT3_LABEL: Record<string, string> = {
   [TOUR_CAT3_MUSEUM_KIND.museum]: '박물관',
@@ -66,6 +68,7 @@ export function toTourPlaceSummary(item: TourListItem): PlaceSummary | null {
 export function toTourPlaceDetail(
   item: TourListItem,
   intro?: TourIntro | null,
+  imageRows?: TourImage[] | null,
 ): PlaceDetail | null {
   const summary = toTourPlaceSummary(item);
   if (!summary) {
@@ -75,13 +78,39 @@ export function toTourPlaceDetail(
   const tel = item.tel?.trim();
   const hours = visitHours(intro);
   const fee = text(intro?.usefee);
+  const images = tourPlaceImages(item, imageRows);
+  const image = summary.image ?? images[0];
   return {
     ...summary,
+    ...(image ? { image } : {}),
     ...(description ? { description } : {}),
     ...(tel ? { tel } : {}),
     ...(hours ? { hours } : {}),
     ...(fee ? { fee } : {}),
+    ...(images.length > 0 ? { images } : {}),
   };
+}
+
+/** 대표 사진을 앞에 두고, 같은 주소는 한 번만. 원본이 없으면 작은 사진을 쓴다. */
+export function tourPlaceImages(item: TourListItem, rows?: TourImage[] | null): string[] {
+  const urls: string[] = [];
+  const seen = new Set<string>();
+  const push = (value?: string): void => {
+    const url = value?.trim();
+    if (!url || seen.has(url) || urls.length >= MAX_PLACE_IMAGES) {
+      return;
+    }
+    seen.add(url);
+    urls.push(url);
+  };
+  push(item.firstimage);
+  for (const row of rows ?? []) {
+    push(row.originimgurl?.trim() || row.smallimageurl);
+  }
+  if (urls.length === 0) {
+    push(item.firstimage2);
+  }
+  return urls;
 }
 
 /** 문화시설은 `*culture`, 관광지는 접미사 없는 칸. 휴무일은 이용시간 다음 줄. */

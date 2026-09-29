@@ -24,6 +24,8 @@ export interface PlaceDetail extends PlaceSummary {
   description?: string;
   fee?: string;
   tel?: string;
+  /** 장소 사진. 대표 이미지가 맨 앞. 유물 사진이 아니다. */
+  images?: string[];
 }
 
 export interface MapPlacesQuery {

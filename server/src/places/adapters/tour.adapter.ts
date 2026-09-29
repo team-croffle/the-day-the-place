@@ -52,7 +52,7 @@ export class TourAdapter {
     if (!found) {
       return null;
     }
-    return toTourPlaceDetail(found.item, found.intro);
+    return toTourPlaceDetail(found.item, found.intro, found.images);
   }
 
   private async fetchAndCache(query: MapPlacesQuery, key: string): Promise<PlaceSummary[]> {

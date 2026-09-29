@@ -8,7 +8,7 @@ import {
 
 import { intersectingAreaCodes } from './tour.areas';
 import { toTourPlaceSummary, unwrapTourItems } from './tour.mapper';
-import type { TourIntro, TourListItem, TourListResponse } from './tour.types';
+import type { TourImage, TourIntro, TourListItem, TourListResponse } from './tour.types';
 
 export const TOUR_API_DEFAULT_BASE = 'https://apis.data.go.kr/B551011/KorService2';
 const LOCATION_LIST_PATH = 'locationBasedList2';
@@ -49,11 +49,11 @@ export async function listTourPlaces(
   return toUniqueInBbox(raw, query);
 }
 
-/** 공통정보와 소개정보. 공통이 없으면 null. 공통 실패는 던지고, 소개 실패는 이용정보만 비운다. */
+/** 공통정보, 소개, 장소 사진. 공통이 없으면 null. 공통 실패는 던지고, 소개·사진 실패는 그 칸만 비운다. */
 export async function getTourPlace(
   contentId: string,
   options: TourListOptions,
-): Promise<{ item: TourListItem; intro: TourIntro | null } | null> {
+): Promise<{ item: TourListItem; intro: TourIntro | null; images: TourImage[] } | null> {
   const fetchImpl = options.fetchImpl ?? fetch;
   const { items } = await tourGet('detailCommon2', { contentId }, options, fetchImpl);
   const item = items[0];
@@ -61,15 +61,17 @@ export async function getTourPlace(
     return null;
   }
   const contentTypeId = item.contenttypeid?.trim();
-  if (!contentTypeId) {
-    return { item, intro: null };
-  }
-  try {
-    const intro = await tourGet('detailIntro2', { contentId, contentTypeId }, options, fetchImpl);
-    return { item, intro: (intro.items[0] as TourIntro | undefined) ?? null };
-  } catch {
-    return { item, intro: null };
-  }
+  const [intro, images] = await Promise.all([
+    contentTypeId
+      ? tourGet('detailIntro2', { contentId, contentTypeId }, options, fetchImpl)
+          .then((page) => (page.items[0] as TourIntro | undefined) ?? null)
+          .catch(() => null)
+      : Promise.resolve(null),
+    tourGet('detailImage2', { contentId, imageYN: 'Y' }, options, fetchImpl)
+      .then((page) => page.items as TourImage[])
+      .catch(() => [] as TourImage[]),
+  ]);
+  return { item, intro, images };
 }
 
 function toUniqueInBbox(raw: TourListItem[], query: MapPlacesQuery): PlaceSummary[] {

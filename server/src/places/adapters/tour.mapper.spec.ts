@@ -154,6 +154,21 @@ describe('toTourPlaceDetail', () => {
     expect(detail?.hours).toBe('10:00\n18:00');
   });
 
+  it('puts the cover first and skips a repeated image url', () => {
+    const detail = toTourPlaceDetail(museum, null, [
+      { originimgurl: 'https://example.com/m.jpg' },
+      { originimgurl: ' https://example.com/hall.jpg ' },
+      { smallimageurl: 'https://example.com/small.jpg' },
+      { originimgurl: '   ' },
+    ]);
+    expect(detail?.images).toEqual([
+      'https://example.com/m.jpg',
+      'https://example.com/hall.jpg',
+      'https://example.com/small.jpg',
+    ]);
+    expect(detail?.image).toBe('https://example.com/m.jpg');
+  });
+
   it('reads site hours without inventing a fee', () => {
     const detail = toTourPlaceDetail(palace, { usetime: '09:00-17:00', usefee: '   ' });
     expect(detail?.kind).toBe('site');
