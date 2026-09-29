@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { API_ROUTES, PLACE_KIND_LABELS, type PlaceDetail, type PlaceKind } from '@nest-vue/shared';
-import { computed, ref, watch } from 'vue';
+import { computed, onUnmounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { RouterLink } from 'vue-router';
 
@@ -19,9 +19,14 @@ const place = ref<PlaceDetail | null>(null);
 const error = ref<string | null>(null);
 const pending = ref(false);
 const tab = ref<'intro' | 'visit' | 'directions' | 'exhibitions'>('intro');
+const openIndex = ref<number | null>(null);
 
 const photos = computed(() =>
   place.value?.images && place.value.images.length > 1 ? place.value.images : [],
+);
+
+const openSrc = computed(() =>
+  openIndex.value === null ? null : (photos.value[openIndex.value] ?? null),
 );
 
 const kindText = computed(() =>
@@ -45,6 +50,7 @@ async function load(id: string): Promise<void> {
   error.value = null;
   place.value = null;
   tab.value = 'intro';
+  openIndex.value = null;
   try {
     const detail = await apiFetch<PlaceDetail>(`/${API_ROUTES.PLACES}/tour/${id}`);
     if (detail.kind !== props.kind) {
@@ -63,6 +69,36 @@ async function load(id: string): Promise<void> {
     pending.value = false;
   }
 }
+
+function closePhoto(): void {
+  openIndex.value = null;
+}
+
+function stepPhoto(delta: number): void {
+  if (openIndex.value === null || photos.value.length === 0) {
+    return;
+  }
+  const count = photos.value.length;
+  openIndex.value = (openIndex.value + delta + count) % count;
+}
+
+function onPhotoKeydown(event: KeyboardEvent): void {
+  if (event.key === 'Escape') {
+    closePhoto();
+  }
+}
+
+watch(openSrc, (src) => {
+  if (src) {
+    window.addEventListener('keydown', onPhotoKeydown);
+  } else {
+    window.removeEventListener('keydown', onPhotoKeydown);
+  }
+});
+
+onUnmounted(() => {
+  window.removeEventListener('keydown', onPhotoKeydown);
+});
 
 watch(
   () => props.id,
@@ -152,13 +188,16 @@ watch(
             <div v-if="photos.length > 0" class="mt-8">
               <h3 class="text-lg font-semibold">{{ t('places.photos') }}</h3>
               <div class="mt-3 flex gap-3 overflow-x-auto">
-                <img
-                  v-for="src in photos"
+                <button
+                  v-for="(src, index) in photos"
                   :key="src"
-                  :src="src"
-                  :alt="place.name"
-                  class="h-44 w-64 shrink-0 object-cover"
-                />
+                  type="button"
+                  class="h-44 w-64 shrink-0"
+                  :aria-label="t('places.openPhoto')"
+                  @click="openIndex = index"
+                >
+                  <img :src="src" alt="" class="h-full w-full object-cover" />
+                </button>
               </div>
             </div>
           </template>
@@ -208,6 +247,33 @@ watch(
             {{ t('places.heritageLater') }}
           </p>
         </aside>
+      </div>
+
+      <div
+        v-if="openSrc"
+        class="bg-ink/80 fixed inset-0 z-50 flex items-center justify-center gap-3 p-4"
+        @click.self="closePhoto"
+      >
+        <button type="button" class="text-paper absolute top-4 right-6 text-sm" @click="closePhoto">
+          {{ t('places.closePhoto') }}
+        </button>
+        <button
+          v-if="photos.length > 1"
+          type="button"
+          class="text-paper shrink-0 px-2 text-sm"
+          @click="stepPhoto(-1)"
+        >
+          {{ t('places.prev') }}
+        </button>
+        <img :src="openSrc" :alt="place.name" class="max-h-[85vh] max-w-full object-contain" />
+        <button
+          v-if="photos.length > 1"
+          type="button"
+          class="text-paper shrink-0 px-2 text-sm"
+          @click="stepPhoto(1)"
+        >
+          {{ t('places.next') }}
+        </button>
       </div>
     </template>
   </div>
