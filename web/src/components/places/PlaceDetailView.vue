@@ -143,7 +143,7 @@ watch(
       </div>
 
       <div class="mx-auto grid max-w-6xl gap-8 px-6 py-10 lg:grid-cols-[1fr_18rem]">
-        <div>
+        <div class="min-w-0">
           <template v-if="tab === 'intro'">
             <h2 class="text-lg font-semibold">{{ t('places.tab.intro') }}</h2>
             <p class="text-muted mt-3 text-sm leading-relaxed whitespace-pre-line">
@@ -151,13 +151,13 @@ watch(
             </p>
             <div v-if="photos.length > 0" class="mt-8">
               <h3 class="text-lg font-semibold">{{ t('places.photos') }}</h3>
-              <div class="mt-3 grid grid-cols-2 gap-3">
+              <div class="mt-3 flex gap-3 overflow-x-auto">
                 <img
                   v-for="src in photos"
                   :key="src"
                   :src="src"
                   :alt="place.name"
-                  class="aspect-4/3 w-full object-cover"
+                  class="h-44 w-64 shrink-0 object-cover"
                 />
               </div>
             </div>
