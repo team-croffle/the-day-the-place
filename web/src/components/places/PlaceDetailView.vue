@@ -19,17 +19,10 @@ const place = ref<PlaceDetail | null>(null);
 const error = ref<string | null>(null);
 const pending = ref(false);
 const tab = ref<'intro' | 'visit' | 'directions' | 'exhibitions'>('intro');
-const photoIndex = ref(0);
 
-const photos = computed(() => {
-  const list = place.value?.images;
-  if (list && list.length > 0) {
-    return list;
-  }
-  return place.value?.image ? [place.value.image] : [];
-});
-
-const heroSrc = computed(() => photos.value[photoIndex.value] ?? photos.value[0]);
+const photos = computed(() =>
+  place.value?.images && place.value.images.length > 1 ? place.value.images : [],
+);
 
 const kindText = computed(() =>
   place.value ? PLACE_KIND_LABELS[place.value.kind][locale.value === 'en' ? 'en' : 'ko'] : '',
@@ -52,7 +45,6 @@ async function load(id: string): Promise<void> {
   error.value = null;
   place.value = null;
   tab.value = 'intro';
-  photoIndex.value = 0;
   try {
     const detail = await apiFetch<PlaceDetail>(`/${API_ROUTES.PLACES}/tour/${id}`);
     if (detail.kind !== props.kind) {
@@ -97,8 +89,8 @@ watch(
     <template v-else-if="place">
       <section class="bg-ink text-paper relative min-h-72">
         <img
-          v-if="heroSrc"
-          :src="heroSrc"
+          v-if="place.image"
+          :src="place.image"
           :alt="place.name"
           class="absolute inset-0 h-full w-full object-cover opacity-60"
         />
@@ -119,27 +111,6 @@ watch(
           <p v-if="place.address" class="text-paper/80 mt-2 text-sm">{{ place.address }}</p>
         </div>
       </section>
-
-      <div v-if="photos.length > 1" class="border-line bg-paper border-b">
-        <div
-          class="mx-auto flex max-w-6xl gap-2 overflow-x-auto px-6 py-3"
-          role="group"
-          :aria-label="t('places.photos')"
-        >
-          <button
-            v-for="(src, index) in photos"
-            :key="src"
-            type="button"
-            class="h-20 w-28 shrink-0 overflow-hidden rounded-sm"
-            :class="photoIndex === index ? 'ring-gold ring-2' : 'opacity-80'"
-            :aria-label="t('places.photo', { n: index + 1 })"
-            :aria-pressed="photoIndex === index"
-            @click="photoIndex = index"
-          >
-            <img :src="src" alt="" class="h-full w-full object-cover" />
-          </button>
-        </div>
-      </div>
 
       <div class="border-line bg-paper border-b">
         <div class="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-6 py-3">
@@ -178,6 +149,18 @@ watch(
             <p class="text-muted mt-3 text-sm leading-relaxed whitespace-pre-line">
               {{ place.description || place.summary || t('places.noIntro') }}
             </p>
+            <div v-if="photos.length > 0" class="mt-8">
+              <h3 class="text-lg font-semibold">{{ t('places.photos') }}</h3>
+              <div class="mt-3 grid grid-cols-2 gap-3">
+                <img
+                  v-for="src in photos"
+                  :key="src"
+                  :src="src"
+                  :alt="place.name"
+                  class="aspect-4/3 w-full object-cover"
+                />
+              </div>
+            </div>
           </template>
           <template v-else-if="tab === 'visit'">
             <h2 class="text-lg font-semibold">{{ t('places.tab.visit') }}</h2>
