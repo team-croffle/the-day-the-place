@@ -78,7 +78,9 @@
     "openPhoto": "View larger",
     "closePhoto": "Close",
     "exhibitionsLater": "Exhibitions for this place come in a later version.",
-    "heritageLater": "Heritage designations are not attached yet.",
+    "designations": "Designations",
+    "noDesignations": "No designated heritage matched this name.",
+    "designationsError": "Designations could not be loaded.",
     "detailCta": "View details",
     "tab": {
       "intro": "About",

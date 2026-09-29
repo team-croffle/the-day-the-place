@@ -243,9 +243,24 @@ watch(
           <h2 class="font-semibold">{{ t('places.facts') }}</h2>
           <p v-if="place.tel" class="mt-3">{{ place.tel }}</p>
           <p v-if="place.address" class="text-muted mt-2">{{ place.address }}</p>
-          <p v-if="kind === 'site'" class="text-muted mt-3 text-xs">
-            {{ t('places.heritageLater') }}
-          </p>
+          <div
+            v-if="kind === 'site' || (place.designations && place.designations.length > 0)"
+            class="mt-4"
+          >
+            <h3 class="text-xs font-semibold">{{ t('places.designations') }}</h3>
+            <p v-if="!place.designations" class="text-muted mt-2 text-xs">
+              {{ t('places.designationsError') }}
+            </p>
+            <p v-else-if="place.designations.length === 0" class="text-muted mt-2 text-xs">
+              {{ t('places.noDesignations') }}
+            </p>
+            <ul v-else class="mt-2 space-y-1">
+              <li v-for="item in place.designations" :key="item.id">
+                <span class="text-gold">{{ item.kind }}</span>
+                {{ item.name }}
+              </li>
+            </ul>
+          </div>
         </aside>
       </div>
 

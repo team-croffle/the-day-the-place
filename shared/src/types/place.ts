@@ -20,12 +20,21 @@ export interface PlaceSummary {
   image?: string;
 }
 
+/** 국가유산 지정 한 줄. 핀이 아니라 그 장소 상세의 목록이다. */
+export interface PlaceDesignation {
+  id: string;
+  name: string;
+  kind: string;
+}
+
 export interface PlaceDetail extends PlaceSummary {
   description?: string;
   fee?: string;
   tel?: string;
   /** 장소 사진. 대표 이미지가 맨 앞. 유물 사진이 아니다. */
   images?: string[];
+  /** 이름·지역으로 찾은 지정. `null`이면 조회 실패라 빈 목록으로 보지 않는다. */
+  designations?: PlaceDesignation[] | null;
 }
 
 export interface MapPlacesQuery {
