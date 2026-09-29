@@ -18,6 +18,13 @@ export interface TourListItem {
   tel?: string;
 }
 
+/** `detailImage2` 한 장. 장소 사진이지 소장 유물이 아니다. */
+export interface TourImage {
+  originimgurl?: string;
+  smallimageurl?: string;
+  imgname?: string;
+}
+
 /** `detailIntro2`는 종류마다 필드 이름이 다르다. 박물관은 culture 접미사, 유적지는 접미사 없음. */
 export interface TourIntro {
   usetime?: string;

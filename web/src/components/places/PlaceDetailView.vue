@@ -19,6 +19,17 @@ const place = ref<PlaceDetail | null>(null);
 const error = ref<string | null>(null);
 const pending = ref(false);
 const tab = ref<'intro' | 'visit' | 'directions' | 'exhibitions'>('intro');
+const photoIndex = ref(0);
+
+const photos = computed(() => {
+  const list = place.value?.images;
+  if (list && list.length > 0) {
+    return list;
+  }
+  return place.value?.image ? [place.value.image] : [];
+});
+
+const heroSrc = computed(() => photos.value[photoIndex.value] ?? photos.value[0]);
 
 const kindText = computed(() =>
   place.value ? PLACE_KIND_LABELS[place.value.kind][locale.value === 'en' ? 'en' : 'ko'] : '',
@@ -41,6 +52,7 @@ async function load(id: string): Promise<void> {
   error.value = null;
   place.value = null;
   tab.value = 'intro';
+  photoIndex.value = 0;
   try {
     const detail = await apiFetch<PlaceDetail>(`/${API_ROUTES.PLACES}/tour/${id}`);
     if (detail.kind !== props.kind) {
@@ -85,8 +97,8 @@ watch(
     <template v-else-if="place">
       <section class="bg-ink text-paper relative min-h-72">
         <img
-          v-if="place.image"
-          :src="place.image"
+          v-if="heroSrc"
+          :src="heroSrc"
           :alt="place.name"
           class="absolute inset-0 h-full w-full object-cover opacity-60"
         />
@@ -107,6 +119,27 @@ watch(
           <p v-if="place.address" class="text-paper/80 mt-2 text-sm">{{ place.address }}</p>
         </div>
       </section>
+
+      <div v-if="photos.length > 1" class="border-line bg-paper border-b">
+        <div
+          class="mx-auto flex max-w-6xl gap-2 overflow-x-auto px-6 py-3"
+          role="group"
+          :aria-label="t('places.photos')"
+        >
+          <button
+            v-for="(src, index) in photos"
+            :key="src"
+            type="button"
+            class="h-20 w-28 shrink-0 overflow-hidden rounded-sm"
+            :class="photoIndex === index ? 'ring-gold ring-2' : 'opacity-80'"
+            :aria-label="t('places.photo', { n: index + 1 })"
+            :aria-pressed="photoIndex === index"
+            @click="photoIndex = index"
+          >
+            <img :src="src" alt="" class="h-full w-full object-cover" />
+          </button>
+        </div>
+      </div>
 
       <div class="border-line bg-paper border-b">
         <div class="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-6 py-3">
