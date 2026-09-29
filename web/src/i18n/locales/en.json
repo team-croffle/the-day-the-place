@@ -54,13 +54,47 @@
     "previewClose": "Close",
     "nearby": "Nearby"
   },
+  "places": {
+    "home": "Home",
+    "search": "Search",
+    "searchPlaceholder": "Search name or address…",
+    "allCategories": "All",
+    "count": "{n} places",
+    "loading": "Loading…",
+    "empty": "No places match.",
+    "prev": "Previous",
+    "next": "Next",
+    "save": "Save",
+    "directionsCta": "Directions",
+    "backToList": "Back to list",
+    "notFound": "Place not found.",
+    "noIntro": "No description yet.",
+    "noVisit": "No visiting information yet.",
+    "hours": "Hours",
+    "fee": "Fee",
+    "tel": "Phone",
+    "facts": "Details",
+    "exhibitionsLater": "Exhibitions for this place come in a later version.",
+    "heritageLater": "Heritage designations are not attached yet.",
+    "detailCta": "View details",
+    "tab": {
+      "intro": "About",
+      "visit": "Visit",
+      "directions": "Directions",
+      "exhibitions": "Exhibitions"
+    }
+  },
   "museums": {
     "heading": "Museums",
-    "body": "List and detail pages land in v0.2."
+    "body": "List and detail pages land in v0.2.",
+    "heroTitle": "Museums",
+    "heroBody": "Museums, memorials, and exhibition halls."
   },
   "sites": {
     "heading": "Heritage sites",
-    "body": "List and detail pages land in v0.2."
+    "body": "List and detail pages land in v0.2.",
+    "heroTitle": "Historic sites",
+    "heroBody": "Historic places from the tourism catalog."
   },
   "exhibitions": {
     "heading": "Exhibitions",
