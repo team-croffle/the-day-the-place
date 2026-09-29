@@ -1,18 +1,4 @@
-import type { MapPlacesQuery, PlaceSummary } from '@nest-vue/shared';
-
-/** 칩 한글 약칭이 주소 표기(전라북도 등)와 안 맞아서 별칭으로 본다. */
-const REGION_ALIASES: Record<string, readonly string[]> = {
-  '11': ['서울'],
-  '31': ['경기'],
-  '32': ['강원'],
-  '33': ['충북', '충청북'],
-  '34': ['충남', '충청남'],
-  '35': ['전북', '전라북'],
-  '36': ['전남', '전라남'],
-  '37': ['경북', '경상북'],
-  '38': ['경남', '경상남'],
-  '39': ['제주'],
-};
+import { placeAddressInRegion, type MapPlacesQuery, type PlaceSummary } from '@nest-vue/shared';
 
 export type RegionView = { lat: number; lng: number; level: number };
 
@@ -31,14 +17,7 @@ export const MAP_REGION_VIEWS: Record<string, RegionView> = {
 };
 
 export function placeInRegion(place: PlaceSummary, code: string): boolean {
-  if (code === 'all') {
-    return true;
-  }
-  const aliases = REGION_ALIASES[code];
-  if (!aliases) {
-    return true;
-  }
-  return aliases.some((alias) => place.address.includes(alias));
+  return placeAddressInRegion(place.address, code);
 }
 
 export function placeInBbox(place: PlaceSummary, bbox: MapPlacesQuery): boolean {

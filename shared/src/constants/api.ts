@@ -16,6 +16,7 @@ export const API_ROUTES = {
   HEALTH: 'health',
   PLACES: 'places',
   PLACES_MAP: 'places/map',
+  PLACES_SEARCH: 'places/search',
   EXHIBITIONS: 'exhibitions',
   AUTH: 'auth',
   FAVORITES: 'favorites',

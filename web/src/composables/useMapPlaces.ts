@@ -1,20 +1,12 @@
 import {
   API_ROUTES,
-  type MapPlacesQuery,
+  KOREA_PLACES_BBOX,
   type MapPlacesResponse,
   type PlaceSummary,
 } from '@nest-vue/shared';
 import { ref, shallowRef } from 'vue';
 
 import { apiFetch } from '@/composables/useApi';
-
-/** 지도에 찍을 Tour 핀 전체. 서버 bbox 상한(8°) 안. */
-export const KOREA_MAP_BBOX: MapPlacesQuery = {
-  swLat: 33,
-  swLng: 124.5,
-  neLat: 38.9,
-  neLng: 132,
-};
 
 export function useMapPlaces() {
   const places = shallowRef<PlaceSummary[]>([]);
@@ -29,10 +21,10 @@ export function useMapPlaces() {
     }
 
     const params = new URLSearchParams({
-      swLat: String(KOREA_MAP_BBOX.swLat),
-      swLng: String(KOREA_MAP_BBOX.swLng),
-      neLat: String(KOREA_MAP_BBOX.neLat),
-      neLng: String(KOREA_MAP_BBOX.neLng),
+      swLat: String(KOREA_PLACES_BBOX.swLat),
+      swLng: String(KOREA_PLACES_BBOX.swLng),
+      neLat: String(KOREA_PLACES_BBOX.neLat),
+      neLng: String(KOREA_PLACES_BBOX.neLng),
     });
 
     pending.value = true;
