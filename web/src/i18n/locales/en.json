@@ -78,9 +78,9 @@
     "openPhoto": "View larger",
     "closePhoto": "Close",
     "exhibitionsLater": "Exhibitions for this place come in a later version.",
-    "designations": "Designations",
-    "noDesignations": "No designated heritage matched this name.",
-    "designationsError": "Designations could not be loaded.",
+    "designations": "National heritage here",
+    "noDesignations": "No national heritage matched this name.",
+    "designationsError": "National heritage here could not be loaded.",
     "detailCta": "View details",
     "tab": {
       "intro": "About",
