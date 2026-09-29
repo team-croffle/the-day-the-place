@@ -1,7 +1,12 @@
 <script setup lang="ts">
-import PageStub from '@/components/PageStub.vue';
+import PlaceListView from '@/components/places/PlaceListView.vue';
 </script>
 
 <template>
-  <PageStub title-key="sites.heading" body-key="sites.body" />
+  <PlaceListView
+    kind="site"
+    title-key="sites.heroTitle"
+    body-key="sites.heroBody"
+    :categories="[]"
+  />
 </template>

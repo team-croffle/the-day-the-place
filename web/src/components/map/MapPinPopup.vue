@@ -2,8 +2,10 @@
 import { PLACE_KIND_LABELS, type PlaceKind, type PlaceSummary } from '@nest-vue/shared';
 import { onBeforeUnmount, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { RouterLink } from 'vue-router';
 
 import { isKakaoMapsReady } from '@/lib/kakaoMap';
+import { placeDetailPath } from '@/lib/placePath';
 import type { KakaoMapInstance } from '@/types/kakao';
 
 const PIN_H = 32;
@@ -85,7 +87,12 @@ onBeforeUnmount(() => {
         {{ kindLabel(place.kind) }}
         <span v-if="place.category !== kindLabel(place.kind)"> · {{ place.category }}</span>
       </p>
-      <p class="mt-0.5 truncate text-sm font-semibold">{{ place.name }}</p>
+      <RouterLink
+        :to="placeDetailPath(place.kind, place.id)"
+        class="mt-0.5 block truncate text-sm font-semibold hover:underline"
+      >
+        {{ place.name }}
+      </RouterLink>
     </div>
   </div>
 </template>
