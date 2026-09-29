@@ -45,14 +45,14 @@ export class TourAdapter {
   }
 
   async getByContentId(contentId: string): Promise<PlaceDetail | null> {
-    const item = await getTourPlace(contentId, {
+    const found = await getTourPlace(contentId, {
       apiKey: this.config.get<string>('TOUR_API_KEY', ''),
       baseUrl: this.config.get<string>('TOUR_API_BASE_URL', TOUR_API_DEFAULT_BASE),
     });
-    if (!item) {
+    if (!found) {
       return null;
     }
-    return toTourPlaceDetail(item);
+    return toTourPlaceDetail(found.item, found.intro);
   }
 
   private async fetchAndCache(query: MapPlacesQuery, key: string): Promise<PlaceSummary[]> {

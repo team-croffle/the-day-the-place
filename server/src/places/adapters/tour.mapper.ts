@@ -7,7 +7,7 @@ import {
   type PlaceSummary,
 } from '@nest-vue/shared';
 
-import type { TourListItem } from './tour.types';
+import type { TourIntro, TourListItem } from './tour.types';
 
 const CAT3_LABEL: Record<string, string> = {
   [TOUR_CAT3_MUSEUM_KIND.museum]: '박물관',
@@ -62,19 +62,43 @@ export function toTourPlaceSummary(item: TourListItem): PlaceSummary | null {
   };
 }
 
-/** 목록과 같은 장소만 상세로 올린다. 미술관·좌표 없음은 null. */
-export function toTourPlaceDetail(item: TourListItem): PlaceDetail | null {
+/** 목록과 같은 장소만 상세로 올린다. 미술관·좌표 없음은 null. intro가 없으면 이용정보만 비운다. */
+export function toTourPlaceDetail(
+  item: TourListItem,
+  intro?: TourIntro | null,
+): PlaceDetail | null {
   const summary = toTourPlaceSummary(item);
   if (!summary) {
     return null;
   }
   const description = item.overview?.trim();
   const tel = item.tel?.trim();
+  const hours = visitHours(intro);
+  const fee = text(intro?.usefee);
   return {
     ...summary,
     ...(description ? { description } : {}),
     ...(tel ? { tel } : {}),
+    ...(hours ? { hours } : {}),
+    ...(fee ? { fee } : {}),
   };
+}
+
+/** 문화시설은 `*culture`, 관광지는 접미사 없는 칸. 휴무일은 이용시간 다음 줄. */
+function visitHours(intro?: TourIntro | null): string | undefined {
+  const open = text(intro?.usetimeculture) ?? text(intro?.usetime);
+  const closed = text(intro?.restdateculture) ?? text(intro?.restdate);
+  const parts = [open, closed ? `휴무 ${closed}` : undefined].filter((part) => part);
+  return parts.length > 0 ? parts.join('\n') : undefined;
+}
+
+function text(value?: string): string | undefined {
+  const trimmed = value
+    ?.replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&nbsp;/gi, ' ')
+    .trim();
+  return trimmed ? trimmed : undefined;
 }
 
 /** Tour는 빈 좌표를 `""`로 준다. `Number("")`는 0이라 좌표 없음으로 본다. */
