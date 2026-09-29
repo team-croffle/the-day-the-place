@@ -18,6 +18,15 @@ export interface TourListItem {
   tel?: string;
 }
 
+/** `detailIntro2`는 종류마다 필드 이름이 다르다. 박물관은 culture 접미사, 유적지는 접미사 없음. */
+export interface TourIntro {
+  usetime?: string;
+  usetimeculture?: string;
+  restdate?: string;
+  restdateculture?: string;
+  usefee?: string;
+}
+
 export interface TourListResponse {
   response?: {
     header?: {

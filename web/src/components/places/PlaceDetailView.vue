@@ -151,7 +151,7 @@ watch(
             <dl class="mt-3 space-y-2 text-sm">
               <div v-if="place.hours">
                 <dt class="text-muted">{{ t('places.hours') }}</dt>
-                <dd>{{ place.hours }}</dd>
+                <dd class="whitespace-pre-line">{{ place.hours }}</dd>
               </div>
               <div v-if="place.fee">
                 <dt class="text-muted">{{ t('places.fee') }}</dt>

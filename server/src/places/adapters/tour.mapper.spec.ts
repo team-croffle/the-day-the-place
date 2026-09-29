@@ -137,6 +137,29 @@ describe('toTourPlaceDetail', () => {
   it('drops a gallery the map would not show', () => {
     expect(toTourPlaceDetail(art)).toBeNull();
   });
+
+  it('reads museum hours, closing day, and fee from culture fields', () => {
+    const detail = toTourPlaceDetail(museum, {
+      usetimeculture: ' 10:00-18:00 ',
+      restdateculture: '월요일',
+      usefee: '무료',
+      usetime: '무시',
+    });
+    expect(detail?.hours).toBe('10:00-18:00\n휴무 월요일');
+    expect(detail?.fee).toBe('무료');
+  });
+
+  it('turns Tour line-break tags into newlines', () => {
+    const detail = toTourPlaceDetail(museum, { usetimeculture: '10:00<br>18:00' });
+    expect(detail?.hours).toBe('10:00\n18:00');
+  });
+
+  it('reads site hours without inventing a fee', () => {
+    const detail = toTourPlaceDetail(palace, { usetime: '09:00-17:00', usefee: '   ' });
+    expect(detail?.kind).toBe('site');
+    expect(detail?.hours).toBe('09:00-17:00');
+    expect(detail?.fee).toBeUndefined();
+  });
 });
 
 describe('unwrapTourItems', () => {

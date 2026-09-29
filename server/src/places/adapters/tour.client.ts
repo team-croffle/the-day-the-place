@@ -8,7 +8,7 @@ import {
 
 import { intersectingAreaCodes } from './tour.areas';
 import { toTourPlaceSummary, unwrapTourItems } from './tour.mapper';
-import type { TourListItem, TourListResponse } from './tour.types';
+import type { TourIntro, TourListItem, TourListResponse } from './tour.types';
 
 export const TOUR_API_DEFAULT_BASE = 'https://apis.data.go.kr/B551011/KorService2';
 const LOCATION_LIST_PATH = 'locationBasedList2';
@@ -49,14 +49,27 @@ export async function listTourPlaces(
   return toUniqueInBbox(raw, query);
 }
 
-/** 상세 공통정보 한 번. 없으면 null. 실패는 던진다. */
+/** 공통정보와 소개정보. 공통이 없으면 null. 공통 실패는 던지고, 소개 실패는 이용정보만 비운다. */
 export async function getTourPlace(
   contentId: string,
   options: TourListOptions,
-): Promise<TourListItem | null> {
+): Promise<{ item: TourListItem; intro: TourIntro | null } | null> {
   const fetchImpl = options.fetchImpl ?? fetch;
   const { items } = await tourGet('detailCommon2', { contentId }, options, fetchImpl);
-  return items[0] ?? null;
+  const item = items[0];
+  if (!item) {
+    return null;
+  }
+  const contentTypeId = item.contenttypeid?.trim();
+  if (!contentTypeId) {
+    return { item, intro: null };
+  }
+  try {
+    const intro = await tourGet('detailIntro2', { contentId, contentTypeId }, options, fetchImpl);
+    return { item, intro: (intro.items[0] as TourIntro | undefined) ?? null };
+  } catch {
+    return { item, intro: null };
+  }
 }
 
 function toUniqueInBbox(raw: TourListItem[], query: MapPlacesQuery): PlaceSummary[] {
