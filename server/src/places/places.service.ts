@@ -9,13 +9,17 @@ import {
 } from '@nest-vue/shared';
 import { Injectable, NotFoundException } from '@nestjs/common';
 
+import { HeritageAdapter } from './adapters/heritage.adapter';
 import { TourAdapter } from './adapters/tour.adapter';
 import { fetchMapPlaces } from './places-map';
 import { searchTourPlaces } from './places-search';
 
 @Injectable()
 export class PlacesService {
-  constructor(private readonly tourAdapter: TourAdapter) {}
+  constructor(
+    private readonly tourAdapter: TourAdapter,
+    private readonly heritageAdapter: HeritageAdapter,
+  ) {}
 
   listMap(query: MapPlacesQuery): Promise<MapPlacesResponse> {
     return fetchMapPlaces(query, (bbox) => this.tourAdapter.listByBbox(bbox));
@@ -32,6 +36,11 @@ export class PlacesService {
     const detail = await this.tourAdapter.getByContentId(id);
     if (!detail) {
       throw new NotFoundException('Place not found');
+    }
+    try {
+      detail.designations = await this.heritageAdapter.findForPlace(detail.name, detail.address);
+    } catch {
+      detail.designations = null;
     }
     return detail;
   }

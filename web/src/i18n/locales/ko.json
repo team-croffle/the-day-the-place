@@ -78,7 +78,9 @@
     "openPhoto": "크게 보기",
     "closePhoto": "닫기",
     "exhibitionsLater": "이 장소의 전시는 이후 버전에서 붙입니다.",
-    "heritageLater": "국가유산 지정 현황은 아직 붙이지 않았습니다.",
+    "designations": "지정 현황",
+    "noDesignations": "이 이름으로 찾은 지정 유산이 없습니다.",
+    "designationsError": "지정 현황을 불러오지 못했습니다.",
     "detailCta": "상세 정보 보기",
     "tab": {
       "intro": "소개",

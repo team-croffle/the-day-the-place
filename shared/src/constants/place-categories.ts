@@ -201,6 +201,38 @@ const REGION_ADDRESS_ALIASES: Record<string, readonly string[]> = {
   '39': ['제주'],
 };
 
+/** 주소에서 국가유산 시도코드. 긴 별칭을 먼저 봐서 충청북이 충남으로 가지 않는다. */
+const ADDRESS_TO_HERITAGE_SIDO: { alias: string; code: string }[] = [
+  { alias: '충청북', code: HERITAGE_SIDO_CODES.chungbuk },
+  { alias: '충청남', code: HERITAGE_SIDO_CODES.chungnam },
+  { alias: '전라북', code: HERITAGE_SIDO_CODES.jeonbuk },
+  { alias: '전북', code: HERITAGE_SIDO_CODES.jeonbuk },
+  { alias: '전라남', code: HERITAGE_SIDO_CODES.jeonnam },
+  { alias: '경상북', code: HERITAGE_SIDO_CODES.gyeongbuk },
+  { alias: '경상남', code: HERITAGE_SIDO_CODES.gyeongnam },
+  { alias: '서울', code: HERITAGE_SIDO_CODES.seoul },
+  { alias: '부산', code: HERITAGE_SIDO_CODES.busan },
+  { alias: '대구', code: HERITAGE_SIDO_CODES.daegu },
+  { alias: '인천', code: HERITAGE_SIDO_CODES.incheon },
+  { alias: '광주', code: HERITAGE_SIDO_CODES.gwangju },
+  { alias: '대전', code: HERITAGE_SIDO_CODES.daejeon },
+  { alias: '울산', code: HERITAGE_SIDO_CODES.ulsan },
+  { alias: '세종', code: HERITAGE_SIDO_CODES.sejong },
+  { alias: '경기', code: HERITAGE_SIDO_CODES.gyeonggi },
+  { alias: '강원', code: HERITAGE_SIDO_CODES.gangwon },
+  { alias: '충북', code: HERITAGE_SIDO_CODES.chungbuk },
+  { alias: '충남', code: HERITAGE_SIDO_CODES.chungnam },
+  { alias: '전남', code: HERITAGE_SIDO_CODES.jeonnam },
+  { alias: '경북', code: HERITAGE_SIDO_CODES.gyeongbuk },
+  { alias: '경남', code: HERITAGE_SIDO_CODES.gyeongnam },
+  { alias: '제주', code: HERITAGE_SIDO_CODES.jeju },
+].toSorted((a, b) => b.alias.length - a.alias.length);
+
+export function heritageSidoFromAddress(address: string): string | undefined {
+  const hit = ADDRESS_TO_HERITAGE_SIDO.find((row) => address.includes(row.alias));
+  return hit?.code;
+}
+
 export function placeAddressInRegion(address: string, code: string): boolean {
   if (code === 'all') {
     return true;
