@@ -43,18 +43,6 @@ class Settings(BaseSettings):
         default="https://api.kcisa.kr/openapi/API_CCA_145/request",
         description="전시정보(통합) 요청 주소",
     )
-    google_search_api_key: str = Field(
-        default="",
-        description="구글 Custom Search 키. 비어 있으면 연합뉴스 검색을 건너뛴다",
-    )
-    google_search_engine_id: str = Field(
-        default="",
-        description="Programmable Search Engine ID (cx). 비어 있으면 연합뉴스 검색을 건너뛴다",
-    )
-    google_search_site: str = Field(
-        default="yna.co.kr",
-        description="구글 검색에 포함할 연합뉴스 도메인",
-    )
 
     # --- 수집 한도 ----------------------------------------------------------
     news_keywords: str = Field(

@@ -2,8 +2,8 @@
 
 「그 날, 그 곳」 특별전 수집기. 하루 한 번 실행되는 배치 프로세스다.
 
-`run()` 한 번이 연합뉴스와 네이버 뉴스를 같이 찾는다.
-같은 기사는 한 건만 남기고, Gemini로 특별전 기사만 고른 뒤 본문에서 제목·기간·기관·소개를 뽑고
+`run()` 한 번이 네이버 뉴스에서 연합뉴스만 찾는다.
+Gemini로 특별전 기사만 고른 뒤 본문에서 제목·기간·기관·소개를 뽑고
 `exhibitions`에 upsert한다. 종료일이 지난 행을 지운다. `DRY_RUN=true`면 DB에 쓰지 않는다.
 전시정보(통합)은 수집하지 않는다. 화면이 그 API를 직접 읽는다.
 
@@ -17,10 +17,9 @@ collector/
 ├── uv.lock
 ├── src/collector/
 │   ├── __main__.py       # python -m collector (로컬/Docker 공통 진입점)
-│   ├── pipeline.py       # run() — 연합뉴스+네이버 → 선별 → 본문 → 저장
+│   ├── pipeline.py       # run() — 연합뉴스 → 선별 → 본문 → 저장
 │   ├── culture.py        # 전시정보(통합) 파서. 수집 경로에서는 부르지 않는다
-│   ├── google_news.py    # 구글 Custom Search. 연합뉴스 도메인만
-│   ├── news.py           # 네이버 뉴스 검색. 같은 제목은 한 건으로 합친다
+│   ├── news.py           # 네이버 뉴스에서 연합뉴스만 검색
 │   ├── extract.py        # Gemini 선별과 본문 구조화. 날짜 없으면 버림
 │   ├── poster.py         # 기사 페이지의 og:image와 본문
 │   ├── places.py         # 기관명 → Tour 장소 ID (선택)
@@ -68,26 +67,23 @@ pnpm test:py
 
 `.env.example` 은 의도적으로 빈 파일이다.
 
-| 변수                      | 필수 | 기본값                      | 설명                                                |
-| ------------------------- | ---- | --------------------------- | --------------------------------------------------- |
-| `DATABASE_URL`            | O    | -                           | `postgresql://user:pass@host:5432/db`               |
-| `NAVER_CLIENT_ID`         | O    | -                           | NAVER API HUB Client ID (`X-NCP-APIGW-API-KEY-ID`)  |
-| `NAVER_CLIENT_SECRET`     | O    | -                           | NAVER API HUB Client Secret (`X-NCP-APIGW-API-KEY`) |
-| `GEMINI_API_KEY`          | O    | -                           | Google AI Studio                                    |
-| `TOUR_API_KEY`            | X    | `""`                        | 인코딩된 관광공사 키. 한 번만 디코드해서 보낸다     |
-| `TOUR_API_BASE_URL`       | X    | KorService2                 | 기관명 검색 베이스                                  |
-| `GOOGLE_SEARCH_API_KEY`   | X    | `""`                        | Custom Search 키. 없으면 연합뉴스는 건너뛴다        |
-| `GOOGLE_SEARCH_ENGINE_ID` | X    | `""`                        | Programmable Search Engine ID (`cx`)                |
-| `GOOGLE_SEARCH_SITE`      | X    | `yna.co.kr`                 | 구글 검색에 포함할 도메인                           |
-| `CULTURE_API_KEY`         | X    | `""`                        | 화면용 전시정보(통합) 키. 수집기는 저장하지 않는다  |
-| `CULTURE_API_URL`         | X    | API_CCA_145                 | 전시정보(통합) 요청 주소                            |
-| `NEWS_KEYWORDS`           | X    | `특별전,기획전,박물관 전시` | 쉼표로 구분한 검색어                                |
-| `NEWS_DISPLAY`            | X    | `100`                       | 검색어마다 가져올 최신 뉴스 수 (최대 100)           |
-| `GEMINI_MODEL`            | X    | `gemini-3.8-flash`          | 구조화 모델                                         |
-| `LOG_LEVEL`               | X    | `INFO`                      | `DEBUG`/`INFO`/`WARNING`/`ERROR`                    |
-| `DRY_RUN`                 | X    | `false`                     | `true` 면 DB 에 쓰지 않는다                         |
+| 변수                  | 필수 | 기본값                      | 설명                                                |
+| --------------------- | ---- | --------------------------- | --------------------------------------------------- |
+| `DATABASE_URL`        | O    | -                           | `postgresql://user:pass@host:5432/db`               |
+| `NAVER_CLIENT_ID`     | O    | -                           | NAVER API HUB Client ID (`X-NCP-APIGW-API-KEY-ID`)  |
+| `NAVER_CLIENT_SECRET` | O    | -                           | NAVER API HUB Client Secret (`X-NCP-APIGW-API-KEY`) |
+| `GEMINI_API_KEY`      | O    | -                           | Google AI Studio                                    |
+| `TOUR_API_KEY`        | X    | `""`                        | 인코딩된 관광공사 키. 한 번만 디코드해서 보낸다     |
+| `TOUR_API_BASE_URL`   | X    | KorService2                 | 기관명 검색 베이스                                  |
+| `CULTURE_API_KEY`     | X    | `""`                        | 화면용 전시정보(통합) 키. 수집기는 저장하지 않는다  |
+| `CULTURE_API_URL`     | X    | API_CCA_145                 | 전시정보(통합) 요청 주소                            |
+| `NEWS_KEYWORDS`       | X    | `특별전,기획전,박물관 전시` | 쉼표로 구분한 검색어                                |
+| `NEWS_DISPLAY`        | X    | `100`                       | 검색어마다 가져올 최신 뉴스 수 (최대 100)           |
+| `GEMINI_MODEL`        | X    | `gemini-3.8-flash`          | 구조화 모델                                         |
+| `LOG_LEVEL`           | X    | `INFO`                      | `DEBUG`/`INFO`/`WARNING`/`ERROR`                    |
+| `DRY_RUN`             | X    | `false`                     | `true` 면 DB 에 쓰지 않는다                         |
 
-`GOOGLE_SEARCH_API_KEY`와 `GOOGLE_SEARCH_ENGINE_ID`가 있으면 검색어마다 연합뉴스(`yna.co.kr`)를 최대 100건 가져온다. 없으면 그 출처만 건너뛴다. 이어서 네이버 뉴스에서 검색어마다 최신 100건을 가져온다. 주소가 같거나 제목이 같은 기사는 한 건만 남기고, 그때 연합뉴스 주소를 남긴다. 20건씩 id를 붙여 Gemini에 넘기고, 박물관·기념관·전시관·유적의 특별전·기획전 id만 받는다. 목록에 없는 id는 버린다. 고른 기사만 열어 `og:image`(로고·아이콘 주소는 제외)와 본문을 읽고, 본문을 Gemini에 다시 넘겨 전시를 뽑는다. 한 기사에 여러 건이면 모두 남긴다. 분당 한도(`429`)에 걸린 호출은 버리지 않는다. 응답의 대기 시간과 1분 중 더 긴 쪽을 쉰 뒤 같은 호출을 다시 한다. 그 대기까지 포함해 10분이 지나면 남은 기사는 다음 실행으로 남긴다.
+검색어마다 뒤에 `연합뉴스`를 붙여 최신 100건을 가져온다. `yna.co.kr` 이거나 네이버 언론사 번호가 001인 기사만 남긴다. 20건씩 id를 붙여 Gemini에 넘기고, 박물관·기념관·전시관·유적의 특별전·기획전 id만 받는다. 목록에 없는 id는 버린다. 고른 기사만 열어 `og:image`(로고·아이콘 주소는 제외)와 본문을 읽고, 본문을 Gemini에 다시 넘겨 전시를 뽑는다. 한 기사에 여러 건이면 모두 남긴다. 분당 한도(`429`)에 걸린 호출은 버리지 않는다. 응답의 대기 시간과 1분 중 더 긴 쪽을 쉰 뒤 같은 호출을 다시 한다. 그 대기까지 포함해 10분이 지나면 남은 기사는 다음 실행으로 남긴다.
 같은 전시는 제목·기관명·시작일로 갱신한다. 시작일을 모르는 진행 중 전시는 제목·기관명·종료일로 갱신한다. 종료일을 읽지 못하면 그 기사는 넣지 않는다. 진행 중인데 시작일만 없으면 남긴다.
 포스터는 기사 페이지의 `og:image`다. 로고·아이콘 주소이거나 없으면 전시 행만 남긴다.
 상태는 서울 날짜 기준으로 `upcoming` 또는 `ongoing`이다. 이미 끝난 전시는 넣지 않고, 저장 뒤에
