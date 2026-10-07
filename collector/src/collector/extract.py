@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import re
+from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import date
 from typing import Literal
@@ -22,15 +23,24 @@ _MIN_RATE_LIMIT_WAIT = 60.0
 _HTTP_TOO_MANY_REQUESTS = 429
 _RETRY_DELAY = re.compile(r"(\d+(?:\.\d+)?)s")
 
-_PROMPT = """\
-다음 뉴스에서 박물관·기념관·전시관·유적지의 특별전 또는 기획전만 뽑아라.
-상설전, 공연, 축제, 판매, 그 밖 기사는 related를 false로 둬라.
+_SELECT_PROMPT = """\
+다음 뉴스에서 박물관·기념관·전시관·유적지의 특별전 또는 기획전 기사만 골라라.
+상설전, 공연, 축제, 판매, 미술관, 그 밖은 빼라.
+고른 기사의 id만 ids에 넣어라.
+
+{items}
+"""
+
+_EXTRACT_PROMPT = """\
+다음 기사에서 박물관·기념관·전시관·유적지의 특별전 또는 기획전만 뽑아라.
+한 기사에 여러 건이면 모두 넣어라. 없으면 빈 목록으로 둬라.
+상설전, 공연, 축제, 판매, 미술관은 넣지 마라.
 날짜는 YYYY-MM-DD만 써라. 기사에 없는 날짜는 만들지 말고 빈 문자열로 둬라.
 진행 중인데 시작일만 모르면 starts_on은 빈 문자열로 두고 ends_on만 써라.
 title은 전시 이름, place_name은 그 전시를 여는 기관, summary는 두 문장 이내다.
 
 제목: {title}
-본문: {description}
+본문: {body}
 """
 
 
@@ -137,7 +147,70 @@ def _retry_delay_seconds(value: object) -> float | None:
     return None
 
 
-def extract_exhibition(settings: Settings, article: NewsArticle) -> ExtractedExhibition | None:
+class SelectedArticleIds(BaseModel):
+    ids: list[int] = []
+
+
+class ExtractedExhibitionList(BaseModel):
+    exhibitions: list[ExtractedExhibition] = []
+
+
+def filter_selected_ids(returned: Sequence[int], allowed: set[int]) -> list[int]:
+    """모델이 만든 번호와 중복은 버린다."""
+    kept: list[int] = []
+    seen: set[int] = set()
+    for article_id in returned:
+        if article_id not in allowed or article_id in seen:
+            continue
+        seen.add(article_id)
+        kept.append(article_id)
+    return kept
+
+
+def select_article_ids(
+    settings: Settings,
+    batch: Sequence[tuple[int, NewsArticle]],
+) -> list[int]:
+    """묶음에서 특별전 기사의 id만 돌려준다."""
+    if not batch:
+        return []
+    items = "\n\n".join(
+        f"id: {article_id}\n제목: {article.title}\n요약: {article.description}"
+        for article_id, article in batch
+    )
+    text = _generate(settings, _SELECT_PROMPT.format(items=items), SelectedArticleIds)
+    if text is None:
+        return []
+    try:
+        parsed = SelectedArticleIds.model_validate_json(text)
+    except ValidationError:
+        logger.warning("Gemini 선별 JSON이 스키마와 다름")
+        return []
+    return filter_selected_ids(parsed.ids, {article_id for article_id, _ in batch})
+
+
+def extract_exhibitions(
+    settings: Settings,
+    article: NewsArticle,
+    body: str,
+) -> list[ExtractedExhibition]:
+    """기사 본문에서 특별전을 한 건 이상 뽑는다. 없으면 빈 목록."""
+    text = _generate(
+        settings,
+        _EXTRACT_PROMPT.format(title=article.title, body=body),
+        ExtractedExhibitionList,
+    )
+    if text is None:
+        return []
+    try:
+        parsed = ExtractedExhibitionList.model_validate_json(text)
+    except ValidationError:
+        logger.warning("Gemini 구조화 JSON이 스키마와 다름: %s", article.url)
+        return []
+    return parsed.exhibitions
+
+
+def _generate(settings: Settings, prompt: str, schema: type[BaseModel]) -> str | None:
     client = genai.Client(
         api_key=settings.gemini_api_key,
         http_options=types.HttpOptions(retry_options=types.HttpRetryOptions(attempts=1)),
@@ -145,26 +218,19 @@ def extract_exhibition(settings: Settings, article: NewsArticle) -> ExtractedExh
     try:
         response = client.models.generate_content(
             model=settings.gemini_model,
-            contents=_PROMPT.format(title=article.title, description=article.description),
+            contents=prompt,
             config=types.GenerateContentConfig(
                 temperature=0,
                 response_mime_type="application/json",
-                response_schema=ExtractedExhibition,
+                response_schema=schema,
             ),
         )
     except errors.ClientError as exc:
         if exc.code == _HTTP_TOO_MANY_REQUESTS:
             raise RateLimitedError(rate_limit_wait(exc.details)) from exc
-        logger.exception("Gemini 구조화 실패: %s", article.url)
+        logger.exception("Gemini 호출 실패")
         return None
     except Exception:
-        logger.exception("Gemini 구조화 실패: %s", article.url)
+        logger.exception("Gemini 호출 실패")
         return None
-    text = response.text
-    if not text:
-        return None
-    try:
-        return ExtractedExhibition.model_validate_json(text)
-    except ValidationError:
-        logger.warning("Gemini JSON이 스키마와 다름: %s", article.url)
-        return None
+    return response.text or None
