@@ -1,13 +1,24 @@
 import { selectExhibitions, type Exhibition, type ExhibitionListQuery } from '@nest-vue/shared';
-import { Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 
 import { DRIZZLE } from '../database/database.constants';
 import type { DrizzleDb } from '../database/database.module';
 import { type ExhibitionRow, exhibitions } from '../database/schema';
+import { fetchCultureExhibitions, omitRowsCoveredByCulture } from './culture-exhibitions';
+
+const CULTURE_TTL_MS = 10 * 60 * 1000;
 
 @Injectable()
 export class ExhibitionsService {
-  constructor(@Inject(DRIZZLE) private readonly db: DrizzleDb) {}
+  private readonly logger = new Logger(ExhibitionsService.name);
+  private cultureCache: { expiresAt: number; rows: Exhibition[] } | null = null;
+  private cultureInflight: Promise<Exhibition[]> | null = null;
+
+  constructor(
+    @Inject(DRIZZLE) private readonly db: DrizzleDb,
+    private readonly config: ConfigService,
+  ) {}
 
   async list(query: ExhibitionListQuery): Promise<Exhibition[]> {
     return selectExhibitions(await this.load(), query, seoulToday());
@@ -24,8 +35,37 @@ export class ExhibitionsService {
   }
 
   private async load(): Promise<Exhibition[]> {
-    const rows = await this.db.select().from(exhibitions);
-    return rows.map(toExhibition);
+    const stored = (await this.db.select().from(exhibitions)).map(toExhibition);
+    const culture = await this.cultureRows();
+    return [...omitRowsCoveredByCulture(stored, culture), ...culture];
+  }
+
+  private cultureRows(): Promise<Exhibition[]> {
+    const now = Date.now();
+    if (this.cultureCache && this.cultureCache.expiresAt > now) {
+      return Promise.resolve(this.cultureCache.rows);
+    }
+    const apiKey = this.config.get<string>('CULTURE_API_KEY', '').trim();
+    if (!apiKey) {
+      return Promise.resolve([]);
+    }
+    this.cultureInflight ??= this.readCulture(apiKey);
+    return this.cultureInflight;
+  }
+
+  private async readCulture(apiKey: string): Promise<Exhibition[]> {
+    try {
+      const rows = await fetchCultureExhibitions(apiKey, seoulToday());
+      this.cultureCache = { expiresAt: Date.now() + CULTURE_TTL_MS, rows };
+      this.logger.log(`전시정보(통합) ${rows.length}건`);
+      return rows;
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : 'unknown';
+      this.logger.warn(`전시정보(통합) 조회 실패: ${reason}`);
+      return [];
+    } finally {
+      this.cultureInflight = null;
+    }
   }
 }
 
