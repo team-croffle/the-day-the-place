@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Mapping
+from urllib.parse import unquote
 
 import httpx
 from tenacity import retry, stop_after_attempt, wait_exponential
@@ -50,7 +51,7 @@ def _search_keyword(
     response = client.get(
         f"{settings.tour_api_base_url.rstrip('/')}/searchKeyword2",
         params={
-            "serviceKey": settings.tour_api_key,
+            "serviceKey": unquote(settings.tour_api_key.strip()),
             "MobileOS": "ETC",
             "MobileApp": "the-day-the-place",
             "_type": "json",
@@ -72,7 +73,10 @@ def match_place(
         return None
     try:
         items = _search_keyword(client, settings, place_name)
+    except httpx.HTTPStatusError as exc:
+        logger.warning("Tour 기관명 검색 실패: %s (%s)", place_name, exc.response.status_code)
+        return None
     except httpx.HTTPError:
-        logger.exception("Tour 기관명 검색 실패: %s", place_name)
+        logger.warning("Tour 기관명 검색 실패: %s", place_name)
         return None
     return choose_tour_place(items)
