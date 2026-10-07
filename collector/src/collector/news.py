@@ -14,7 +14,7 @@ from collector.settings import Settings
 
 logger = logging.getLogger(__name__)
 
-_NAVER_NEWS_URL = "https://openapi.naver.com/v1/search/news.json"
+_NAVER_NEWS_URL = "https://naverapihub.apigw.ntruss.com/search/v1/news"
 _TAG = re.compile(r"<[^>]+>")
 
 
@@ -37,10 +37,15 @@ def plain_text(value: str) -> str:
 def _search_once(client: httpx.Client, settings: Settings, keyword: str) -> list[NewsArticle]:
     response = client.get(
         _NAVER_NEWS_URL,
-        params={"query": keyword, "display": settings.news_display, "sort": "date"},
+        params={
+            "query": keyword,
+            "display": settings.news_display,
+            "sort": "date",
+            "format": "json",
+        },
         headers={
-            "X-Naver-Client-Id": settings.naver_client_id,
-            "X-Naver-Client-Secret": settings.naver_client_secret,
+            "X-NCP-APIGW-API-KEY-ID": settings.naver_client_id,
+            "X-NCP-APIGW-API-KEY": settings.naver_client_secret,
         },
     )
     response.raise_for_status()
