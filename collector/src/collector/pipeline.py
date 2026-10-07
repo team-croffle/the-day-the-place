@@ -14,6 +14,7 @@ from zoneinfo import ZoneInfo
 
 import httpx
 
+from collector.culture import fetch_culture_drafts, prefer_culture
 from collector.extract import (
     ExhibitionDraft,
     ExtractedExhibition,
@@ -217,8 +218,12 @@ def run(settings: Settings) -> None:
     logger.info("collector start (dry_run=%s today=%s)", settings.dry_run, today.isoformat())
 
     with httpx.Client(timeout=20.0) as client:
+        culture = [
+            _attach_place(draft, match_place(client, settings, draft.place_name))
+            for draft in fetch_culture_drafts(client, settings, today)
+        ]
         articles = fetch_news(client, settings)
-        drafts = build_drafts(
+        news = build_drafts(
             articles,
             select_ids=lambda batch: select_article_ids(settings, batch),
             fetch_page=lambda page_url: fetch_article_page(client, page_url),
@@ -226,6 +231,8 @@ def run(settings: Settings) -> None:
             match_place_name=lambda place_name: match_place(client, settings, place_name),
             today=today,
         )
+    drafts, preferred = prefer_culture(culture, news)
+    logger.info("culture=%s news=%s kept=%s", len(culture), len(news), len(drafts))
 
     if settings.dry_run:
         for draft in drafts:
@@ -240,5 +247,15 @@ def run(settings: Settings) -> None:
         logger.info("collector done (dry-run, drafts=%s)", len(drafts))
         return
 
-    deleted = save_exhibitions(settings.database_url, drafts, today)
+    deleted = save_exhibitions(settings.database_url, drafts, today, preferred=preferred)
     logger.info("collector done (drafts=%s deleted_ended=%s)", len(drafts), deleted)
+
+
+def _attach_place(
+    draft: ExhibitionDraft,
+    place: tuple[str, str] | None,
+) -> ExhibitionDraft:
+    if place is None:
+        return draft
+    source, place_id = place
+    return replace(draft, place_source=source, place_id=place_id)

@@ -22,6 +22,7 @@ def test_settings_load_from_env(monkeypatch: pytest.MonkeyPatch) -> None:
     assert settings.log_level == "INFO"
     assert settings.dry_run is False
     assert settings.tour_api_key == ""
+    assert settings.culture_api_key == ""
 
 
 def test_settings_require_database_url(monkeypatch: pytest.MonkeyPatch) -> None:
