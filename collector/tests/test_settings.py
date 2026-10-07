@@ -23,9 +23,6 @@ def test_settings_load_from_env(monkeypatch: pytest.MonkeyPatch) -> None:
     assert settings.dry_run is False
     assert settings.tour_api_key == ""
     assert settings.culture_api_key == ""
-    assert settings.google_search_api_key == ""
-    assert settings.google_search_engine_id == ""
-    assert settings.google_search_site == "yna.co.kr"
 
 
 def test_settings_require_database_url(monkeypatch: pytest.MonkeyPatch) -> None:

@@ -23,8 +23,7 @@ from collector.extract import (
     filter_selected_ids,
     select_article_ids,
 )
-from collector.google_news import fetch_yonhap_articles
-from collector.news import NewsArticle, fetch_news, merge_articles
+from collector.news import NewsArticle, fetch_news
 from collector.places import match_place
 from collector.poster import fetch_article_page
 from collector.settings import Settings
@@ -218,11 +217,7 @@ def run(settings: Settings) -> None:
     logger.info("collector start (dry_run=%s today=%s)", settings.dry_run, today.isoformat())
 
     with httpx.Client(timeout=20.0) as client:
-        articles = merge_articles(
-            fetch_yonhap_articles(client, settings),
-            fetch_news(client, settings),
-        )
-        logger.info("articles=%s", len(articles))
+        articles = fetch_news(client, settings)
         drafts = build_drafts(
             articles,
             select_ids=lambda batch: select_article_ids(settings, batch),
