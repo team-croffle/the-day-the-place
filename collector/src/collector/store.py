@@ -21,6 +21,7 @@ INSERT INTO exhibitions (
     place_id,
     place_name,
     summary,
+    image_url,
     collected_at,
     source_url
 ) VALUES (
@@ -32,6 +33,7 @@ INSERT INTO exhibitions (
     %(place_id)s,
     %(place_name)s,
     %(summary)s,
+    %(image_url)s,
     %(collected_at)s,
     %(source_url)s
 )
@@ -41,6 +43,7 @@ ON CONFLICT (title, place_name, starts_on) DO UPDATE SET
     place_source = EXCLUDED.place_source,
     place_id = EXCLUDED.place_id,
     summary = EXCLUDED.summary,
+    image_url = COALESCE(EXCLUDED.image_url, exhibitions.image_url),
     collected_at = EXCLUDED.collected_at,
     source_url = EXCLUDED.source_url
 """
@@ -64,6 +67,7 @@ def save_exhibitions(database_url: str, drafts: list[ExhibitionDraft], today: da
                     "place_id": draft.place_id,
                     "place_name": draft.place_name,
                     "summary": draft.summary,
+                    "image_url": draft.image_url,
                     "collected_at": collected_at,
                     "source_url": draft.source_url,
                 },

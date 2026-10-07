@@ -21,6 +21,7 @@ from collector.extract import (
 )
 from collector.news import NewsArticle, fetch_news
 from collector.places import match_place
+from collector.poster import fetch_poster_url
 from collector.settings import Settings
 from collector.store import save_exhibitions
 
@@ -38,10 +39,11 @@ def build_drafts(
     *,
     extract: Callable[[NewsArticle], ExtractedExhibition | None],
     match_place_name: Callable[[str], tuple[str, str] | None],
+    fetch_poster: Callable[[str], str | None],
     today: date,
     gemini_call_limit: int,
 ) -> list[ExhibitionDraft]:
-    """Gemini 호출 수를 상한까지 쓰고, 초안이 된 것만 장소 ID를 붙인다."""
+    """Gemini 호출 수를 상한까지 쓰고, 초안이 된 것만 장소 ID와 포스터를 붙인다."""
     drafts: list[ExhibitionDraft] = []
     calls = 0
     for article in articles:
@@ -58,6 +60,10 @@ def build_drafts(
         if place is not None:
             source, place_id = place
             draft = replace(draft, place_source=source, place_id=place_id)
+        if draft.source_url:
+            image_url = fetch_poster(draft.source_url)
+            if image_url:
+                draft = replace(draft, image_url=image_url)
         drafts.append(draft)
     logger.info("gemini_calls=%s drafts=%s", calls, len(drafts))
     return drafts
@@ -74,6 +80,7 @@ def run(settings: Settings) -> None:
             articles,
             extract=lambda article: extract_exhibition(settings, article),
             match_place_name=lambda place_name: match_place(client, settings, place_name),
+            fetch_poster=lambda page_url: fetch_poster_url(client, page_url),
             today=today,
             gemini_call_limit=settings.gemini_call_limit,
         )
