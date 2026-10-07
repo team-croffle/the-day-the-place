@@ -4,8 +4,11 @@ from __future__ import annotations
 
 import logging
 import re
+import unicodedata
+from collections.abc import Sequence
 from dataclasses import dataclass
 from html import unescape
+from urllib.parse import urlparse
 
 import httpx
 from tenacity import retry, stop_after_attempt, wait_exponential
@@ -16,6 +19,7 @@ logger = logging.getLogger(__name__)
 
 _NAVER_NEWS_URL = "https://naverapihub.apigw.ntruss.com/search/v1/news"
 _TAG = re.compile(r"<[^>]+>")
+_MIN_SHARED_TITLE = 8
 
 
 @dataclass(frozen=True)
@@ -82,3 +86,52 @@ def fetch_news(client: httpx.Client, settings: Settings) -> list[NewsArticle]:
             found.append(article)
     logger.info("news articles=%s", len(found))
     return found
+
+
+def merge_articles(
+    yonhap: Sequence[NewsArticle],
+    naver: Sequence[NewsArticle],
+) -> list[NewsArticle]:
+    """연합뉴스를 앞에 두고, 같은 주소나 같은 제목은 한 건만 남긴다.
+
+    같은 기사가 네이버 주소로도 있으면 연합뉴스 주소를 남긴다.
+    """
+    merged: list[NewsArticle] = []
+    for article in (*yonhap, *naver):
+        index = _same_article(merged, article)
+        if index is None:
+            merged.append(article)
+            continue
+        current = merged[index]
+        if _prefer_yonhap(article, current):
+            merged[index] = article
+    return merged
+
+
+def _same_article(articles: Sequence[NewsArticle], article: NewsArticle) -> int | None:
+    folded = _fold_title(article.title)
+    for index, current in enumerate(articles):
+        if current.url == article.url or _titles_match(folded, _fold_title(current.title)):
+            return index
+    return None
+
+
+def _titles_match(left: str, right: str) -> bool:
+    if left == right:
+        return True
+    shorter, longer = (left, right) if len(left) <= len(right) else (right, left)
+    return len(shorter) >= _MIN_SHARED_TITLE and shorter in longer
+
+
+def _fold_title(value: str) -> str:
+    folded = unicodedata.normalize("NFKC", value).casefold()
+    return "".join(character for character in folded if character.isalnum())
+
+
+def _prefer_yonhap(candidate: NewsArticle, current: NewsArticle) -> bool:
+    return _is_yonhap(candidate.url) and not _is_yonhap(current.url)
+
+
+def _is_yonhap(url: str) -> bool:
+    host = urlparse(url).hostname or ""
+    return host == "yna.co.kr" or host.endswith(".yna.co.kr")
