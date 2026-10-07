@@ -1,4 +1,4 @@
-"""뉴스 한 건을 특별전 초안으로 바꾼다. 날짜가 없으면 버린다."""
+"""뉴스 한 건을 특별전 초안으로 바꾼다. 종료일을 모르거나 이미 끝났으면 버린다."""
 
 from __future__ import annotations
 
@@ -25,7 +25,8 @@ _RETRY_DELAY = re.compile(r"(\d+(?:\.\d+)?)s")
 _PROMPT = """\
 다음 뉴스에서 박물관·기념관·전시관·유적지의 특별전 또는 기획전만 뽑아라.
 상설전, 공연, 축제, 판매, 그 밖 기사는 related를 false로 둬라.
-날짜는 YYYY-MM-DD만 써라. 시작일이나 종료일을 기사에서 알 수 없으면 빈 문자열로 둬라.
+날짜는 YYYY-MM-DD만 써라. 기사에 없는 날짜는 만들지 말고 빈 문자열로 둬라.
+진행 중인데 시작일만 모르면 starts_on은 빈 문자열로 두고 ends_on만 써라.
 title은 전시 이름, place_name은 그 전시를 여는 기관, summary는 두 문장 이내다.
 
 제목: {title}
@@ -45,7 +46,7 @@ class ExtractedExhibition(BaseModel):
 @dataclass(frozen=True)
 class ExhibitionDraft:
     title: str
-    starts_on: date
+    starts_on: date | None
     ends_on: date
     status: ExhibitionStatus
     place_name: str
@@ -72,7 +73,10 @@ def draft_from_extract(
     source_url: str | None,
     today: date,
 ) -> ExhibitionDraft | None:
-    """날짜가 없거나 이미 끝난 전시, 박물관·유적이 아닌 기사는 None이다."""
+    """종료일을 모르거나 이미 끝난 전시, 박물관·유적이 아닌 기사는 None이다.
+
+    진행 중이면 시작일이 없어도 남긴다.
+    """
     if not raw.related:
         return None
     starts_on = parse_iso_date(raw.starts_on)
@@ -80,11 +84,13 @@ def draft_from_extract(
     title = raw.title.strip()
     place_name = raw.place_name.strip()
     summary = raw.summary.strip()
-    if starts_on is None or ends_on is None or ends_on < starts_on:
+    if ends_on is None or ends_on < today or not title or not place_name or not summary:
         return None
-    if ends_on < today or not title or not place_name or not summary:
+    if starts_on is not None and ends_on < starts_on:
         return None
-    status: ExhibitionStatus = "upcoming" if today < starts_on else "ongoing"
+    status: ExhibitionStatus = (
+        "upcoming" if starts_on is not None and today < starts_on else "ongoing"
+    )
     return ExhibitionDraft(
         title=title,
         starts_on=starts_on,

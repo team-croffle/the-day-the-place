@@ -20,9 +20,26 @@ def _raw(**overrides: object) -> ExtractedExhibition:
     return ExtractedExhibition.model_validate(data)
 
 
-def test_missing_date_is_dropped() -> None:
+def test_missing_end_date_is_dropped() -> None:
     assert draft_from_extract(_raw(ends_on=""), source_url=None, today=TODAY) is None
-    assert draft_from_extract(_raw(starts_on="다음 달"), source_url=None, today=TODAY) is None
+    assert draft_from_extract(_raw(ends_on="다음 달"), source_url=None, today=TODAY) is None
+
+
+def test_ongoing_without_start_date_is_kept() -> None:
+    draft = draft_from_extract(_raw(starts_on=""), source_url=None, today=TODAY)
+    assert draft is not None
+    assert draft.starts_on is None
+    assert draft.status == "ongoing"
+    assert draft.ends_on == date(2026, 12, 31)
+
+
+def test_unknown_start_and_ended_show_is_dropped() -> None:
+    draft = draft_from_extract(
+        _raw(starts_on="", ends_on="2026-09-30"),
+        source_url=None,
+        today=TODAY,
+    )
+    assert draft is None
 
 
 def test_ended_exhibition_is_dropped() -> None:

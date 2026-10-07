@@ -1,4 +1,5 @@
 import { EXHIBITION_STATUSES } from '@nest-vue/shared';
+import { sql } from 'drizzle-orm';
 import {
   date,
   index,
@@ -18,7 +19,7 @@ export const exhibitions = pgTable(
   {
     id: uuid().primaryKey().defaultRandom(),
     title: text().notNull(),
-    startsOn: date({ mode: 'string' }).notNull(),
+    startsOn: date({ mode: 'string' }),
     endsOn: date({ mode: 'string' }).notNull(),
     status: exhibitionStatusEnum().notNull(),
     placeSource: text(),
@@ -30,7 +31,12 @@ export const exhibitions = pgTable(
     sourceUrl: text(),
   },
   (table) => [
-    uniqueIndex('exhibitions_title_place_starts').on(table.title, table.placeName, table.startsOn),
+    uniqueIndex('exhibitions_title_place_starts')
+      .on(table.title, table.placeName, table.startsOn)
+      .where(sql`${table.startsOn} is not null`),
+    uniqueIndex('exhibitions_title_place_ends_no_start')
+      .on(table.title, table.placeName, table.endsOn)
+      .where(sql`${table.startsOn} is null`),
     index('exhibitions_place_idx').on(table.placeSource, table.placeId),
     index('exhibitions_ends_on_idx').on(table.endsOn),
     index('exhibitions_status_idx').on(table.status),
