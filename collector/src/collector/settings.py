@@ -31,6 +31,19 @@ class Settings(BaseSettings):
     naver_client_secret: str = Field(description="네이버 뉴스 검색 API client secret")
     gemini_api_key: str = Field(description="Google AI Studio API key")
     tour_api_key: str = Field(default="", description="기관명 → place_id 연결용 (선택)")
+    tour_api_base_url: str = Field(
+        default="https://apis.data.go.kr/B551011/KorService2",
+        description="기관명 검색에 쓰는 TourAPI 베이스",
+    )
+
+    # --- 수집 한도 ----------------------------------------------------------
+    news_keywords: str = Field(
+        default="특별전,기획전,박물관 전시",
+        description="쉼표로 구분한 네이버 뉴스 검색어",
+    )
+    news_display: int = Field(default=20, ge=1, le=100, description="검색어마다 가져올 뉴스 수")
+    gemini_call_limit: int = Field(default=30, ge=0, description="한 번에 호출할 Gemini 상한")
+    gemini_model: str = Field(default="gemini-2.5-flash", description="구조화에 쓸 Gemini 모델")
 
     # --- 실행 옵션 ----------------------------------------------------------
     log_level: LogLevel = "INFO"
