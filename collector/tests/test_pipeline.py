@@ -33,7 +33,7 @@ def test_split_keywords_drops_blanks() -> None:
     assert split_keywords("특별전, 기획전, ,박물관 전시") == ["특별전", "기획전", "박물관 전시"]
 
 
-def test_gemini_limit_stops_calls() -> None:
+def test_every_article_is_sent_to_gemini() -> None:
     calls: list[str] = []
 
     def extract(article: NewsArticle) -> ExtractedExhibition:
@@ -46,11 +46,10 @@ def test_gemini_limit_stops_calls() -> None:
         match_place_name=lambda _name: None,
         fetch_poster=lambda _url: None,
         today=TODAY,
-        gemini_call_limit=2,
     )
 
-    assert calls == ["https://a", "https://b"]
-    assert len(drafts) == 2
+    assert calls == ["https://a", "https://b", "https://c"]
+    assert len(drafts) == 3
 
 
 def test_rate_limit_retries_the_same_article() -> None:
@@ -74,7 +73,6 @@ def test_rate_limit_retries_the_same_article() -> None:
         match_place_name=lambda _name: None,
         fetch_poster=lambda _url: None,
         today=TODAY,
-        gemini_call_limit=2,
         sleep=sleep,
         monotonic=lambda: clock["t"],
         budget_seconds=600,
@@ -104,7 +102,6 @@ def test_rate_limit_retries_when_the_wait_lands_on_the_deadline() -> None:
         match_place_name=lambda _name: None,
         fetch_poster=lambda _url: None,
         today=TODAY,
-        gemini_call_limit=1,
         sleep=sleep,
         monotonic=lambda: clock["t"],
         budget_seconds=60,
@@ -127,7 +124,6 @@ def test_rate_limit_stops_when_the_wait_exceeds_the_budget() -> None:
         match_place_name=lambda _name: None,
         fetch_poster=lambda _url: None,
         today=TODAY,
-        gemini_call_limit=10,
         sleep=lambda _seconds: None,
         monotonic=lambda: 0.0,
         budget_seconds=30,
@@ -161,7 +157,6 @@ def test_place_is_attached_only_after_a_draft() -> None:
         match_place_name=match,
         fetch_poster=poster,
         today=TODAY,
-        gemini_call_limit=10,
     )
 
     assert looked_up == ["국립중앙박물관"]
