@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { Exhibition } from '@nest-vue/shared';
 import { useI18n } from 'vue-i18n';
+import { RouterLink } from 'vue-router';
 
 import { exhibitionPeriod } from '@/lib/exhibitionPeriod';
 
@@ -13,8 +14,9 @@ const { t } = useI18n();
 </script>
 
 <template>
-  <article
-    class="bg-paper overflow-hidden rounded-md shadow-sm"
+  <RouterLink
+    :to="`/exhibitions/${exhibition.id}`"
+    class="bg-paper hover:border-ink/30 block overflow-hidden rounded-md border border-transparent shadow-sm"
     :class="featured ? 'sm:grid sm:grid-cols-2' : ''"
   >
     <div class="bg-line relative" :class="featured ? 'min-h-56 sm:min-h-72' : 'h-40'">
@@ -39,15 +41,12 @@ const { t } = useI18n();
         {{ exhibitionPeriod(exhibition.startsOn, exhibition.endsOn) }}
       </p>
       <p class="mt-1 text-xs">{{ exhibition.placeName }}</p>
-      <a
-        v-if="featured && exhibition.sourceUrl"
-        :href="exhibition.sourceUrl"
-        target="_blank"
-        rel="noopener noreferrer"
-        class="bg-ink text-paper hover:bg-ink/90 mt-4 inline-flex w-fit rounded-sm px-3 py-1.5 text-xs"
+      <span
+        v-if="featured"
+        class="bg-ink text-paper mt-4 inline-flex w-fit rounded-sm px-3 py-1.5 text-xs"
       >
         {{ t('exhibitions.readMore') }}
-      </a>
+      </span>
     </div>
-  </article>
+  </RouterLink>
 </template>

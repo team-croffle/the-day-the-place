@@ -60,6 +60,15 @@ def test_unrelated_article_is_dropped() -> None:
     assert draft_from_extract(_raw(related=False), source_url=None, today=TODAY) is None
 
 
+def test_place_outside_the_map_is_dropped() -> None:
+    draft = draft_from_extract(
+        _raw(place_name="전남대학교 문화전문대학원"),
+        source_url=None,
+        today=TODAY,
+    )
+    assert draft is None
+
+
 def test_upcoming_and_ongoing() -> None:
     upcoming = draft_from_extract(
         _raw(starts_on="2026-11-01", ends_on="2026-12-01"),

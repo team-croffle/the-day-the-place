@@ -54,4 +54,56 @@ describe('selectExhibitions', () => {
       ),
     ).toEqual(['2']);
   });
+
+  it('keeps one card when titles differ only by punctuation or a longer subtitle', () => {
+    const rows = [
+      row({
+        id: 'late',
+        title: '망친 것은 없었다–한익환의 작품이 건네는 위로',
+        startsOn: '2026-10-01',
+        endsOn: '2027-06-30',
+        placeName: '원광대학교 박물관',
+        summary: '짧다',
+      }),
+      row({
+        id: 'open',
+        title: '망친 것은 없었다?한익환의 작품이 건네는 위로',
+        startsOn: '2024-05-01',
+        endsOn: '2027-06-30',
+        placeName: '원광대학교 박물관',
+        summary: '한익환의 작품이 건네는 위로를 보여 준다.',
+      }),
+      row({
+        id: 'plain',
+        title: '황룡사, 부처의 사리를 모시다',
+        endsOn: '2026-10-11',
+        placeName: '국립경주박물관',
+        placeId: '129778',
+        summary: '사리',
+      }),
+      row({
+        id: 'long',
+        title: '황룡사, 부처의 사리를 모시다 - 皇龍奉佛',
+        endsOn: '2026-10-11',
+        placeName: '국립경주박물관',
+        placeId: '129778',
+        summary: '사리장엄을 보여 준다.',
+      }),
+    ];
+
+    expect(selectExhibitions(rows, {}, TODAY).map((item) => item.id)).toEqual(['long', 'open']);
+  });
+
+  it('drops a venue that is not a museum, memorial, or exhibition hall', () => {
+    const kept = selectExhibitions(
+      [
+        row({ id: 'school', placeName: '전남대학교 문화전문대학원', placeId: null }),
+        row({ id: 'gallery', placeName: '클리블랜드미술관', placeId: null }),
+        row(),
+      ],
+      {},
+      TODAY,
+    );
+    expect(kept.map((item) => item.id)).toEqual(['1']);
+  });
 });

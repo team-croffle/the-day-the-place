@@ -22,6 +22,7 @@ ExhibitionStatus = Literal["upcoming", "ongoing"]
 _MIN_RATE_LIMIT_WAIT = 60.0
 _HTTP_TOO_MANY_REQUESTS = 429
 _RETRY_DELAY = re.compile(r"(\d+(?:\.\d+)?)s")
+_MAP_PLACE = re.compile(r"박물관|기념관|전시관")
 
 _SELECT_PROMPT = """\
 다음 뉴스에서 박물관·기념관·전시관·유적지의 특별전 또는 기획전 기사만 골라라.
@@ -34,7 +35,8 @@ _SELECT_PROMPT = """\
 _EXTRACT_PROMPT = """\
 다음 기사에서 박물관·기념관·전시관·유적지의 특별전 또는 기획전만 뽑아라.
 한 기사에 여러 건이면 모두 넣어라. 없으면 빈 목록으로 둬라.
-상설전, 공연, 축제, 판매, 미술관은 넣지 마라.
+상설전, 공연, 축제, 판매, 미술관, 갤러리, 대학원은 넣지 마라.
+place_name은 박물관·기념관·전시관만 써라.
 날짜는 YYYY-MM-DD만 써라. 기사에 없는 날짜는 만들지 말고 빈 문자열로 둬라.
 진행 중인데 시작일만 모르면 starts_on은 빈 문자열로 두고 ends_on만 써라.
 title은 전시 이름, place_name은 그 전시를 여는 기관, summary는 두 문장 이내다.
@@ -67,6 +69,11 @@ class ExhibitionDraft:
     place_id: str | None = None
 
 
+def _is_map_place(place_name: str) -> bool:
+    """지도에 올리는 박물관·기념관·전시관만 남긴다."""
+    return _MAP_PLACE.search(place_name) is not None
+
+
 def parse_iso_date(value: str) -> date | None:
     text = value.strip()
     if not text:
@@ -95,6 +102,8 @@ def draft_from_extract(
     place_name = raw.place_name.strip()
     summary = raw.summary.strip()
     if ends_on is None or ends_on < today or not title or not place_name or not summary:
+        return None
+    if not _is_map_place(place_name):
         return None
     if starts_on is not None and ends_on < starts_on:
         return None

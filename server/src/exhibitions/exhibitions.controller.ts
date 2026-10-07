@@ -1,5 +1,5 @@
 import { API_ROUTES, type ApiResponse, type Exhibition } from '@nest-vue/shared';
-import { BadRequestException, Controller, Get, Query } from '@nestjs/common';
+import { BadRequestException, Controller, Get, Param, Query } from '@nestjs/common';
 
 import { ListExhibitionsQueryDto } from './dto/list-exhibitions.query';
 import { ExhibitionsService } from './exhibitions.service';
@@ -14,5 +14,10 @@ export class ExhibitionsController {
       throw new BadRequestException('placeSource and placeId are required together');
     }
     return { data: await this.exhibitionsService.list(query) };
+  }
+
+  @Get(':id')
+  async findOne(@Param('id') id: string): Promise<ApiResponse<Exhibition>> {
+    return { data: await this.exhibitionsService.findOne(id) };
   }
 }
