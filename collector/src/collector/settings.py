@@ -35,6 +35,14 @@ class Settings(BaseSettings):
         default="https://apis.data.go.kr/B551011/KorService2",
         description="기관명 검색에 쓰는 TourAPI 베이스",
     )
+    culture_api_key: str = Field(
+        default="",
+        description="문화공공데이터 전시정보(통합) 서비스키. 비어 있으면 그 출처는 건너뛴다",
+    )
+    culture_api_url: str = Field(
+        default="https://api.kcisa.kr/openapi/API_CCA_145/request",
+        description="전시정보(통합) 요청 주소",
+    )
 
     # --- 수집 한도 ----------------------------------------------------------
     news_keywords: str = Field(
