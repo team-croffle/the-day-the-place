@@ -1,0 +1,116 @@
+"""뉴스 한 건을 특별전 초안으로 바꾼다. 날짜가 없으면 버린다."""
+
+from __future__ import annotations
+
+import logging
+from dataclasses import dataclass
+from datetime import date
+from typing import Literal
+
+from google import genai
+from google.genai import types
+from pydantic import BaseModel, ValidationError
+
+from collector.news import NewsArticle
+from collector.settings import Settings
+
+logger = logging.getLogger(__name__)
+
+ExhibitionStatus = Literal["upcoming", "ongoing"]
+
+_PROMPT = """\
+다음 뉴스에서 박물관·기념관·전시관·유적지의 특별전 또는 기획전만 뽑아라.
+상설전, 공연, 축제, 판매, 그 밖 기사는 related를 false로 둬라.
+날짜는 YYYY-MM-DD만 써라. 시작일이나 종료일을 기사에서 알 수 없으면 빈 문자열로 둬라.
+title은 전시 이름, place_name은 그 전시를 여는 기관, summary는 두 문장 이내다.
+
+제목: {title}
+본문: {description}
+"""
+
+
+class ExtractedExhibition(BaseModel):
+    related: bool
+    title: str = ""
+    starts_on: str = ""
+    ends_on: str = ""
+    place_name: str = ""
+    summary: str = ""
+
+
+@dataclass(frozen=True)
+class ExhibitionDraft:
+    title: str
+    starts_on: date
+    ends_on: date
+    status: ExhibitionStatus
+    place_name: str
+    summary: str
+    source_url: str | None
+    place_source: str | None = None
+    place_id: str | None = None
+
+
+def parse_iso_date(value: str) -> date | None:
+    text = value.strip()
+    if not text:
+        return None
+    try:
+        return date.fromisoformat(text)
+    except ValueError:
+        return None
+
+
+def draft_from_extract(
+    raw: ExtractedExhibition,
+    *,
+    source_url: str | None,
+    today: date,
+) -> ExhibitionDraft | None:
+    """날짜가 없거나 이미 끝난 전시, 박물관·유적이 아닌 기사는 None이다."""
+    if not raw.related:
+        return None
+    starts_on = parse_iso_date(raw.starts_on)
+    ends_on = parse_iso_date(raw.ends_on)
+    title = raw.title.strip()
+    place_name = raw.place_name.strip()
+    summary = raw.summary.strip()
+    if starts_on is None or ends_on is None or ends_on < starts_on:
+        return None
+    if ends_on < today or not title or not place_name or not summary:
+        return None
+    status: ExhibitionStatus = "upcoming" if today < starts_on else "ongoing"
+    return ExhibitionDraft(
+        title=title,
+        starts_on=starts_on,
+        ends_on=ends_on,
+        status=status,
+        place_name=place_name,
+        summary=summary,
+        source_url=source_url,
+    )
+
+
+def extract_exhibition(settings: Settings, article: NewsArticle) -> ExtractedExhibition | None:
+    client = genai.Client(api_key=settings.gemini_api_key)
+    try:
+        response = client.models.generate_content(
+            model=settings.gemini_model,
+            contents=_PROMPT.format(title=article.title, description=article.description),
+            config=types.GenerateContentConfig(
+                temperature=0,
+                response_mime_type="application/json",
+                response_schema=ExtractedExhibition,
+            ),
+        )
+    except Exception:
+        logger.exception("Gemini 구조화 실패: %s", article.url)
+        return None
+    text = response.text
+    if not text:
+        return None
+    try:
+        return ExtractedExhibition.model_validate_json(text)
+    except ValidationError:
+        logger.warning("Gemini JSON이 스키마와 다름: %s", article.url)
+        return None

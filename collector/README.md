@@ -2,8 +2,8 @@
 
 「그 날, 그 곳」 특별전 수집기. 하루 한 번 실행되는 배치 프로세스다.
 
-> 현재는 **기본 세팅만** 되어 있다. 실제 수집 로직(네이버 뉴스 검색 → Gemini 구조화 →
-> `exhibitions` upsert → 종료분 DELETE)은 `src/collector/pipeline.py` 의 `run()` 안에 채운다.
+`run()` 한 번이 네이버 뉴스에서 특별전을 찾고, Gemini로 제목·기간·기관·소개를 뽑은 뒤
+`exhibitions`에 upsert하고, 종료일이 지난 행을 지운다. `DRY_RUN=true`면 DB에 쓰지 않는다.
 
 ## 구성
 
@@ -15,7 +15,11 @@ collector/
 ├── uv.lock
 ├── src/collector/
 │   ├── __main__.py       # python -m collector (로컬/Docker 공통 진입점)
-│   ├── pipeline.py       # run() ← 수집 로직이 들어갈 자리
+│   ├── pipeline.py       # run() — 뉴스 → 구조화 → 저장 → 종료분 삭제
+│   ├── news.py           # 네이버 뉴스 검색
+│   ├── extract.py        # Gemini 구조화. 날짜 없으면 버림
+│   ├── places.py         # 기관명 → Tour 장소 ID (선택)
+│   ├── store.py          # upsert / 종료분 DELETE
 │   ├── settings.py       # 환경 변수 선언
 │   └── log.py
 └── tests/
@@ -59,15 +63,24 @@ pnpm test:py
 
 `.env.example` 은 의도적으로 빈 파일이다.
 
-| 변수                  | 필수 | 기본값  | 설명                                  |
-| --------------------- | ---- | ------- | ------------------------------------- |
-| `DATABASE_URL`        | O    | -       | `postgresql://user:pass@host:5432/db` |
-| `NAVER_CLIENT_ID`     | O    | -       | 네이버 뉴스 검색 API                  |
-| `NAVER_CLIENT_SECRET` | O    | -       | 네이버 뉴스 검색 API                  |
-| `GEMINI_API_KEY`      | O    | -       | Google AI Studio                      |
-| `TOUR_API_KEY`        | X    | `""`    | 기관명 → `source+place_id` 연결용     |
-| `LOG_LEVEL`           | X    | `INFO`  | `DEBUG`/`INFO`/`WARNING`/`ERROR`      |
-| `DRY_RUN`             | X    | `false` | `true` 면 DB 에 쓰지 않는다           |
+| 변수                  | 필수 | 기본값                      | 설명                                  |
+| --------------------- | ---- | --------------------------- | ------------------------------------- |
+| `DATABASE_URL`        | O    | -                           | `postgresql://user:pass@host:5432/db` |
+| `NAVER_CLIENT_ID`     | O    | -                           | 네이버 뉴스 검색 API                  |
+| `NAVER_CLIENT_SECRET` | O    | -                           | 네이버 뉴스 검색 API                  |
+| `GEMINI_API_KEY`      | O    | -                           | Google AI Studio                      |
+| `TOUR_API_KEY`        | X    | `""`                        | 기관명 → `source+place_id` 연결용     |
+| `TOUR_API_BASE_URL`   | X    | KorService2                 | 기관명 검색 베이스                    |
+| `NEWS_KEYWORDS`       | X    | `특별전,기획전,박물관 전시` | 쉼표로 구분한 검색어                  |
+| `NEWS_DISPLAY`        | X    | `20`                        | 검색어마다 가져올 뉴스 수 (최대 100)  |
+| `GEMINI_CALL_LIMIT`   | X    | `30`                        | 한 번 실행의 Gemini 호출 상한         |
+| `GEMINI_MODEL`        | X    | `gemini-2.5-flash`          | 구조화 모델                           |
+| `LOG_LEVEL`           | X    | `INFO`                      | `DEBUG`/`INFO`/`WARNING`/`ERROR`      |
+| `DRY_RUN`             | X    | `false`                     | `true` 면 DB 에 쓰지 않는다           |
+
+같은 전시는 제목·기관명·시작일로 갱신한다. 시작일이나 종료일을 읽지 못하면 그 기사는 넣지 않는다.
+상태는 서울 날짜 기준으로 `upcoming` 또는 `ongoing`이다. 이미 끝난 전시는 넣지 않고, 저장 뒤에
+`ends_on`이 오늘보다 이전인 행을 지운다. 기관명으로 Tour 장소를 못 찾아도 전시 행은 남는다.
 
 ## 스키마 소유권
 
