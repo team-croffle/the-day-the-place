@@ -3,12 +3,13 @@
 from __future__ import annotations
 
 import logging
+import re
 from dataclasses import dataclass
 from datetime import date
 from typing import Literal
 
 from google import genai
-from google.genai import types
+from google.genai import errors, types
 from pydantic import BaseModel, ValidationError
 
 from collector.news import NewsArticle
@@ -17,6 +18,9 @@ from collector.settings import Settings
 logger = logging.getLogger(__name__)
 
 ExhibitionStatus = Literal["upcoming", "ongoing"]
+_MIN_RATE_LIMIT_WAIT = 60.0
+_HTTP_TOO_MANY_REQUESTS = 429
+_RETRY_DELAY = re.compile(r"(\d+(?:\.\d+)?)s")
 
 _PROMPT = """\
 다음 뉴스에서 박물관·기념관·전시관·유적지의 특별전 또는 기획전만 뽑아라.
@@ -92,8 +96,46 @@ def draft_from_extract(
     )
 
 
+class RateLimitedError(Exception):
+    """분당 한도에 걸린 호출. 기사는 버리지 않고 기다렸다가 다시 부른다."""
+
+    def __init__(self, retry_after: float) -> None:
+        self.retry_after = retry_after
+        super().__init__(f"retry after {retry_after}")
+
+
+def rate_limit_wait(details: object) -> float:
+    """응답의 대기 시간과 1분 중 더 긴 쪽. 대기 시간을 못 읽으면 1분."""
+    parsed = _retry_delay_seconds(details)
+    if parsed is None:
+        return _MIN_RATE_LIMIT_WAIT
+    return max(parsed, _MIN_RATE_LIMIT_WAIT)
+
+
+def _retry_delay_seconds(value: object) -> float | None:
+    if isinstance(value, dict):
+        raw = value.get("retryDelay")
+        if isinstance(raw, str):
+            match = _RETRY_DELAY.fullmatch(raw.strip())
+            if match:
+                return float(match.group(1))
+        for child in value.values():
+            found = _retry_delay_seconds(child)
+            if found is not None:
+                return found
+    elif isinstance(value, list):
+        for child in value:
+            found = _retry_delay_seconds(child)
+            if found is not None:
+                return found
+    return None
+
+
 def extract_exhibition(settings: Settings, article: NewsArticle) -> ExtractedExhibition | None:
-    client = genai.Client(api_key=settings.gemini_api_key)
+    client = genai.Client(
+        api_key=settings.gemini_api_key,
+        http_options=types.HttpOptions(retry_options=types.HttpRetryOptions(attempts=1)),
+    )
     try:
         response = client.models.generate_content(
             model=settings.gemini_model,
@@ -104,6 +146,11 @@ def extract_exhibition(settings: Settings, article: NewsArticle) -> ExtractedExh
                 response_schema=ExtractedExhibition,
             ),
         )
+    except errors.ClientError as exc:
+        if exc.code == _HTTP_TOO_MANY_REQUESTS:
+            raise RateLimitedError(rate_limit_wait(exc.details)) from exc
+        logger.exception("Gemini 구조화 실패: %s", article.url)
+        return None
     except Exception:
         logger.exception("Gemini 구조화 실패: %s", article.url)
         return None

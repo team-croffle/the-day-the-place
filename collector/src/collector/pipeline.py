@@ -6,6 +6,7 @@ Modal 함수와 `python -m collector` 가 공통으로 호출하는 단 하나�
 from __future__ import annotations
 
 import logging
+import time
 from collections.abc import Callable, Sequence
 from dataclasses import replace
 from datetime import date, datetime
@@ -16,6 +17,7 @@ import httpx
 from collector.extract import (
     ExhibitionDraft,
     ExtractedExhibition,
+    RateLimitedError,
     draft_from_extract,
     extract_exhibition,
 )
@@ -28,6 +30,7 @@ from collector.store import save_exhibitions
 logger = logging.getLogger(__name__)
 
 _SEOUL = ZoneInfo("Asia/Seoul")
+_GEMINI_BUDGET_SECONDS = 600.0
 
 
 def seoul_today() -> date:
@@ -42,15 +45,35 @@ def build_drafts(
     fetch_poster: Callable[[str], str | None],
     today: date,
     gemini_call_limit: int,
+    sleep: Callable[[float], None] = time.sleep,
+    monotonic: Callable[[], float] = time.monotonic,
+    budget_seconds: float = _GEMINI_BUDGET_SECONDS,
 ) -> list[ExhibitionDraft]:
-    """Gemini 호출 수를 상한까지 쓰고, 초안이 된 것만 장소 ID와 포스터를 붙인다."""
+    """Gemini 호출 수를 상한까지 쓰고, 초안이 된 것만 장소 ID와 포스터를 붙인다.
+
+    분당 한도에 걸리면 그 기사는 버리지 않고 기다렸다가 다시 부른다.
+    대기까지 포함해 budget_seconds 를 넘기면 남은 기사는 다음 실행으로 남긴다.
+    """
     drafts: list[ExhibitionDraft] = []
     calls = 0
+    waits = 0
+    deadline = monotonic() + budget_seconds
     for article in articles:
         if calls >= gemini_call_limit:
             break
+        outcome = _extract_allowing_rate_limit(
+            article,
+            extract=extract,
+            sleep=sleep,
+            monotonic=monotonic,
+            deadline=deadline,
+        )
+        if outcome is None:
+            logger.info("Gemini 시간 한도, 남은 기사는 다음 실행으로 남긴다")
+            break
+        raw, waited = outcome
         calls += 1
-        raw = extract(article)
+        waits += waited
         if raw is None:
             continue
         draft = draft_from_extract(raw, source_url=article.url, today=today)
@@ -65,8 +88,33 @@ def build_drafts(
             if image_url:
                 draft = replace(draft, image_url=image_url)
         drafts.append(draft)
-    logger.info("gemini_calls=%s drafts=%s", calls, len(drafts))
+    logger.info("gemini_calls=%s drafts=%s rate_limit_waits=%s", calls, len(drafts), waits)
     return drafts
+
+
+def _extract_allowing_rate_limit(
+    article: NewsArticle,
+    *,
+    extract: Callable[[NewsArticle], ExtractedExhibition | None],
+    sleep: Callable[[float], None],
+    monotonic: Callable[[], float],
+    deadline: float,
+) -> tuple[ExtractedExhibition | None, int] | None:
+    """답을 받으면 (결과, 대기 횟수). 시간 한도에 걸리면 None."""
+    if monotonic() >= deadline:
+        return None
+    waits = 0
+    while True:
+        try:
+            return extract(article), waits
+        except RateLimitedError as limited:
+            wait = limited.retry_after
+            if monotonic() + wait > deadline:
+                logger.info("Gemini 분당 한도 대기가 시간 한도를 넘긴다: %s", article.url)
+                return None
+            waits += 1
+            logger.info("Gemini 분당 한도, %.0f초 후 재시도: %s", wait, article.url)
+            sleep(wait)
 
 
 def run(settings: Settings) -> None:
