@@ -55,3 +55,34 @@ def test_news_search_keeps_only_yonhap() -> None:
         "https://www.yna.co.kr/view/AKR1",
         "https://n.news.naver.com/article/001/2",
     ]
+
+
+def test_news_search_reads_the_next_page_until_the_yonhap_quota() -> None:
+    starts: list[str] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        start = request.url.params["start"]
+        starts.append(start)
+        if start == "1":
+            item = {
+                "title": "다른 신문",
+                "description": "인용",
+                "originallink": "https://www.example.com/news/1",
+                "link": "https://n.news.naver.com/article/023/1",
+            }
+        else:
+            item = {
+                "title": "우리들의 밥상",
+                "description": "연합뉴스",
+                "originallink": "https://www.yna.co.kr/view/AKR1",
+                "link": "https://n.news.naver.com/article/001/1",
+            }
+        return httpx.Response(200, json={"items": [item]})
+
+    settings = _settings()
+    settings = settings.model_copy(update={"news_display": 1})
+    with httpx.Client(transport=httpx.MockTransport(handler)) as client:
+        articles = fetch_news(client, settings)
+
+    assert starts == ["1", "2"]
+    assert [article.url for article in articles] == ["https://www.yna.co.kr/view/AKR1"]

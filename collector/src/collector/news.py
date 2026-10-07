@@ -19,6 +19,7 @@ _NAVER_NEWS_URL = "https://naverapihub.apigw.ntruss.com/search/v1/news"
 _TAG = re.compile(r"<[^>]+>")
 _YONHAP_OFFICE = "/article/001/"
 _YONHAP_QUERY = "연합뉴스"
+_MAX_WINDOW = 1000
 
 
 @dataclass(frozen=True)
@@ -37,12 +38,19 @@ def plain_text(value: str) -> str:
 
 
 @retry(stop=stop_after_attempt(3), wait=wait_exponential(min=1, max=8), reraise=True)
-def _search_once(client: httpx.Client, settings: Settings, keyword: str) -> list[NewsArticle]:
+def _search_page(
+    client: httpx.Client,
+    settings: Settings,
+    keyword: str,
+    start: int,
+    size: int,
+) -> tuple[int, list[NewsArticle]]:
     response = client.get(
         _NAVER_NEWS_URL,
         params={
             "query": _yonhap_query(keyword),
-            "display": settings.news_display,
+            "display": size,
+            "start": start,
             "sort": "date",
             "format": "json",
         },
@@ -53,9 +61,9 @@ def _search_once(client: httpx.Client, settings: Settings, keyword: str) -> list
     )
     response.raise_for_status()
     payload = response.json()
-    items = payload.get("items")
+    items = payload.get("items") if isinstance(payload, dict) else None
     if not isinstance(items, list):
-        return []
+        return 0, []
     articles: list[NewsArticle] = []
     for item in items:
         if not isinstance(item, dict):
@@ -65,7 +73,40 @@ def _search_once(client: httpx.Client, settings: Settings, keyword: str) -> list
         url = _yonhap_url(item)
         if title and url:
             articles.append(NewsArticle(title=title, description=description, url=url))
-    return articles
+    return len(items), articles
+
+
+def _search_keyword(
+    client: httpx.Client,
+    settings: Settings,
+    keyword: str,
+) -> list[NewsArticle]:
+    """연합뉴스가 목표 건수가 될 때까지 다음 페이지를 읽는다."""
+    target = settings.news_display
+    found: list[NewsArticle] = []
+    seen: set[str] = set()
+    start = 1
+    while start <= _MAX_WINDOW and len(found) < target:
+        size = min(target, _MAX_WINDOW - start + 1)
+        try:
+            raw_count, batch = _search_page(client, settings, keyword, start, size)
+        except httpx.HTTPStatusError as exc:
+            logger.warning("네이버 뉴스 검색 실패: %s status=%s", keyword, exc.response.status_code)
+            break
+        except httpx.HTTPError:
+            logger.warning("네이버 뉴스 검색 실패: %s", keyword)
+            break
+        for article in batch:
+            if article.url in seen:
+                continue
+            seen.add(article.url)
+            found.append(article)
+            if len(found) >= target:
+                break
+        if raw_count < size:
+            break
+        start += size
+    return found[:target]
 
 
 def fetch_news(client: httpx.Client, settings: Settings) -> list[NewsArticle]:
@@ -73,12 +114,7 @@ def fetch_news(client: httpx.Client, settings: Settings) -> list[NewsArticle]:
     found: list[NewsArticle] = []
     seen: set[str] = set()
     for keyword in split_keywords(settings.news_keywords):
-        try:
-            batch = _search_once(client, settings, keyword)
-        except httpx.HTTPError:
-            logger.exception("네이버 뉴스 검색 실패: %s", keyword)
-            continue
-        for article in batch:
+        for article in _search_keyword(client, settings, keyword):
             if article.url in seen:
                 continue
             seen.add(article.url)

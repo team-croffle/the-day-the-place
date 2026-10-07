@@ -50,7 +50,10 @@ class Settings(BaseSettings):
         description="쉼표로 구분한 네이버 뉴스 검색어",
     )
     news_display: int = Field(
-        default=100, ge=1, le=100, description="검색어마다 가져올 최신 뉴스 수"
+        default=100,
+        ge=1,
+        le=100,
+        description="검색어마다 남길 연합뉴스 수. 모자라면 다음 페이지를 읽는다",
     )
     gemini_model: str = Field(default="gemini-3.8-flash", description="구조화에 쓸 Gemini 모델")
 
