@@ -30,7 +30,6 @@
     "**/coverage/**",
     "**/*.d.ts",
     "pnpm-lock.yaml",
-    "server/drizzle/**",
     ".husky/_/**"
   ]
 }
