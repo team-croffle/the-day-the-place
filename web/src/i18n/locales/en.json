@@ -114,6 +114,8 @@
     "readMore": "Read more",
     "loading": "Loading exhibitions…",
     "empty": "No exhibitions match.",
+    "notFound": "Exhibition not found.",
+    "source": "Read the article",
     "status": {
       "ongoing": "On view",
       "upcoming": "Upcoming"

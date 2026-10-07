@@ -83,9 +83,7 @@ const eras = [
       <p v-if="ongoing.length === 0" class="text-muted text-sm">{{ t('exhibitions.empty') }}</p>
       <ul v-else class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <li v-for="item in ongoing" :key="item.id">
-          <RouterLink to="/exhibitions" class="block">
-            <ExhibitionCard :exhibition="item" />
-          </RouterLink>
+          <ExhibitionCard :exhibition="item" />
         </li>
       </ul>
     </section>

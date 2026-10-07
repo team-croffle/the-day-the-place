@@ -1,5 +1,5 @@
 import { selectExhibitions, type Exhibition, type ExhibitionListQuery } from '@nest-vue/shared';
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 
 import { DRIZZLE } from '../database/database.constants';
 import type { DrizzleDb } from '../database/database.module';
@@ -10,8 +10,22 @@ export class ExhibitionsService {
   constructor(@Inject(DRIZZLE) private readonly db: DrizzleDb) {}
 
   async list(query: ExhibitionListQuery): Promise<Exhibition[]> {
+    return selectExhibitions(await this.load(), query, seoulToday());
+  }
+
+  async findOne(id: string): Promise<Exhibition> {
+    const found = selectExhibitions(await this.load(), {}, seoulToday()).find(
+      (row) => row.id === id,
+    );
+    if (!found) {
+      throw new NotFoundException(`Exhibition ${id} not found`);
+    }
+    return found;
+  }
+
+  private async load(): Promise<Exhibition[]> {
     const rows = await this.db.select().from(exhibitions);
-    return selectExhibitions(rows.map(toExhibition), query, seoulToday());
+    return rows.map(toExhibition);
   }
 }
 

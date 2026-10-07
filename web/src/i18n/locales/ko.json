@@ -114,6 +114,8 @@
     "readMore": "자세히 보기",
     "loading": "전시를 불러오는 중…",
     "empty": "조건에 맞는 전시가 없습니다.",
+    "notFound": "전시를 찾을 수 없습니다.",
+    "source": "기사 보기",
     "status": {
       "ongoing": "진행중",
       "upcoming": "예정"
