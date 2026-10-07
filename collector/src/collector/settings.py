@@ -42,7 +42,6 @@ class Settings(BaseSettings):
         description="쉼표로 구분한 네이버 뉴스 검색어",
     )
     news_display: int = Field(default=20, ge=1, le=100, description="검색어마다 가져올 뉴스 수")
-    gemini_call_limit: int = Field(default=30, ge=0, description="한 번에 호출할 Gemini 상한")
     gemini_model: str = Field(default="gemini-3.8-flash", description="구조화에 쓸 Gemini 모델")
 
     # --- 실행 옵션 ----------------------------------------------------------

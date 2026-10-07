@@ -44,12 +44,11 @@ def build_drafts(
     match_place_name: Callable[[str], tuple[str, str] | None],
     fetch_poster: Callable[[str], str | None],
     today: date,
-    gemini_call_limit: int,
     sleep: Callable[[float], None] = time.sleep,
     monotonic: Callable[[], float] = time.monotonic,
     budget_seconds: float = _GEMINI_BUDGET_SECONDS,
 ) -> list[ExhibitionDraft]:
-    """Gemini 호출 수를 상한까지 쓰고, 초안이 된 것만 장소 ID와 포스터를 붙인다.
+    """가져온 기사를 모두 보고, 초안이 된 것만 장소 ID와 포스터를 붙인다.
 
     분당 한도에 걸리면 그 기사는 버리지 않고 기다렸다가 다시 부른다.
     대기까지 포함해 budget_seconds 를 넘기면 남은 기사는 다음 실행으로 남긴다.
@@ -59,8 +58,6 @@ def build_drafts(
     waits = 0
     deadline = monotonic() + budget_seconds
     for article in articles:
-        if calls >= gemini_call_limit:
-            break
         outcome = _extract_allowing_rate_limit(
             article,
             extract=extract,
@@ -130,7 +127,6 @@ def run(settings: Settings) -> None:
             match_place_name=lambda place_name: match_place(client, settings, place_name),
             fetch_poster=lambda page_url: fetch_poster_url(client, page_url),
             today=today,
-            gemini_call_limit=settings.gemini_call_limit,
         )
 
     if settings.dry_run:
