@@ -5,6 +5,7 @@ from datetime import date
 import httpx
 import pytest
 
+from collector import culture
 from collector.culture import (
     StoredExhibitionRef,
     draft_from_culture_item,
@@ -152,6 +153,7 @@ def test_encoded_service_key_is_sent_once_and_pages_follow_total(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr("collector.culture._PAGE_SIZE", 1)
+    monkeypatch.setattr("collector.culture._address_for", lambda _host: None)
     seen: list[str] = []
 
     def handler(request: httpx.Request) -> httpx.Response:
@@ -181,7 +183,9 @@ def test_encoded_service_key_is_sent_once_and_pages_follow_total(
     assert [draft.place_name for draft in drafts] == ["국립중앙박물관", "국립경주박물관"]
 
 
-def test_error_code_returns_no_drafts() -> None:
+def test_error_code_returns_no_drafts(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr("collector.culture._address_for", lambda _host: None)
+
     def handler(_request: httpx.Request) -> httpx.Response:
         return httpx.Response(200, json={"response": {"header": {"resultCode": "9999"}}})
 
@@ -189,3 +193,18 @@ def test_error_code_returns_no_drafts() -> None:
         drafts = fetch_culture_drafts(client, _settings("key"), TODAY)
 
     assert drafts == []
+
+
+def test_dns_answer_reads_ipv4() -> None:
+    packet = bytearray(culture._dns_query("api.kcisa.kr"))
+    packet[6:8] = (1).to_bytes(2, "big")
+    packet += b"\xc0\x0c\x00\x01\x00\x01\x00\x00\x00\x3c\x00\x04" + bytes((175, 125, 91, 8))
+    assert culture._dns_a_record(bytes(packet)) == "175.125.91.8"
+
+
+def test_missing_system_dns_asks_the_kcisa_nameserver(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(culture, "_system_address", lambda _host: None)
+    monkeypatch.setattr(culture, "_authoritative_a", lambda _host: "175.125.91.8")
+
+    assert culture._address_for("api.kcisa.kr") == "175.125.91.8"
+    assert culture._address_for("example.com") is None
