@@ -4,12 +4,15 @@ from __future__ import annotations
 
 import logging
 import re
+import socket
 import unicodedata
-from collections.abc import Mapping, Sequence
+from collections.abc import Iterator, Mapping, Sequence
+from contextlib import contextmanager
 from dataclasses import dataclass, replace
 from datetime import date
 from html import unescape
-from urllib.parse import unquote
+from typing import Any
+from urllib.parse import unquote, urlparse
 
 import httpx
 
@@ -18,11 +21,15 @@ from collector.settings import Settings
 
 logger = logging.getLogger(__name__)
 
+_KCISA_NAMESERVER = "ns.kcis.or.kr"
 _PAGE_SIZE = 100
 _MAX_PAGES = 200
 _OK_CODES = frozenset({"0000", "00", "0"})
 _MIN_SHARED_TITLE = 8
 _SUMMARY_LIMIT = 800
+_DNS_HEADER = 12
+_IPV4_LENGTH = 4
+_DNS_POINTER = 0xC0
 _URL = re.compile(r"https?://[^\s\"'<>]+")
 _YMD = re.compile(
     r"(?P<y>\d{4})\s*[.\-/년]\s*(?P<m>\d{1,2})\s*[.\-/월]\s*(?P<d>\d{1,2})",
@@ -217,6 +224,67 @@ def parse_culture_payload(payload: object) -> tuple[list[dict[str, object]], int
 
 
 def _fetch_items(client: httpx.Client, url: str, key: str) -> list[dict[str, object]]:
+    host = urlparse(url).hostname or ""
+    with _using_address(host, _address_for(host)):
+        return _read_pages(client, url, key)
+
+
+def _address_for(host: str) -> str | None:
+    """시스템 DNS가 실패하면 kcisa.kr 권한 서버에 A 레코드를 다시 묻는다."""
+    found = _system_address(host)
+    if found is not None:
+        return found
+    if not host.endswith(".kcisa.kr"):
+        return None
+    logger.info("시스템 DNS에 %s 가 없어 권한 서버에 다시 묻는다", host)
+    return _authoritative_a(host)
+
+
+def _system_address(host: str) -> str | None:
+    try:
+        address = socket.getaddrinfo(host, 443, socket.AF_INET)[0][4][0]
+    except socket.gaierror:
+        return None
+    if isinstance(address, str):
+        return address
+    return None
+
+
+def _authoritative_a(host: str) -> str | None:
+    nameserver = _system_address(_KCISA_NAMESERVER)
+    if nameserver is None:
+        return None
+    try:
+        return _dns_query_a(nameserver, host)
+    except OSError:
+        return None
+
+
+@contextmanager
+def _using_address(host: str, address: str | None) -> Iterator[None]:
+    if not host or address is None:
+        yield
+        return
+    original = socket.getaddrinfo
+
+    def resolve(
+        hostname: str | bytes | None,
+        port: int | str | None,
+        *args: Any,
+        **kwargs: Any,
+    ) -> Any:
+        if hostname == host:
+            return original(address, port, *args, **kwargs)
+        return original(hostname, port, *args, **kwargs)
+
+    socket.getaddrinfo = resolve  # type: ignore[assignment]
+    try:
+        yield
+    finally:
+        socket.getaddrinfo = original
+
+
+def _read_pages(client: httpx.Client, url: str, key: str) -> list[dict[str, object]]:
     items: list[dict[str, object]] = []
     total: int | None = None
     for page in range(1, _MAX_PAGES + 1):
@@ -237,6 +305,53 @@ def _fetch_items(client: httpx.Client, url: str, key: str) -> list[dict[str, obj
     else:
         logger.warning("전시정보(통합) 페이지 상한에 걸렸다")
     return items
+
+
+def _dns_query_a(server: str, host: str) -> str | None:
+    query = _dns_query(host)
+    with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
+        sock.settimeout(3)
+        sock.sendto(query, (server, 53))
+        data, _ = sock.recvfrom(2048)
+    return _dns_a_record(data)
+
+
+def _dns_query(host: str) -> bytes:
+    header = b"\x1c\x1a\x01\x00\x00\x01\x00\x00\x00\x00\x00\x00"
+    labels = b"".join(bytes([len(part)]) + part.encode("ascii") for part in host.split("."))
+    return header + labels + b"\x00\x00\x01\x00\x01"
+
+
+def _dns_a_record(data: bytes) -> str | None:
+    if len(data) < _DNS_HEADER:
+        return None
+    questions = int.from_bytes(data[4:6], "big")
+    answers = int.from_bytes(data[6:8], "big")
+    offset = 12
+    for _ in range(questions):
+        offset = _skip_dns_name(data, offset) + 4
+    for _ in range(answers):
+        offset = _skip_dns_name(data, offset)
+        if offset + 10 > len(data):
+            return None
+        record_type = int.from_bytes(data[offset : offset + 2], "big")
+        length = int.from_bytes(data[offset + 8 : offset + 10], "big")
+        start = offset + 10
+        if record_type == 1 and length == _IPV4_LENGTH and start + _IPV4_LENGTH <= len(data):
+            return ".".join(str(octet) for octet in data[start : start + 4])
+        offset = start + length
+    return None
+
+
+def _skip_dns_name(data: bytes, offset: int) -> int:
+    while offset < len(data):
+        length = data[offset]
+        if length == 0:
+            return offset + 1
+        if (length & _DNS_POINTER) == _DNS_POINTER:
+            return offset + 2
+        offset += 1 + length
+    return offset
 
 
 def _read_body(response: httpx.Response) -> tuple[list[dict[str, object]], int | None]:
