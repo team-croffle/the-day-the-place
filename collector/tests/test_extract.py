@@ -2,7 +2,12 @@ from __future__ import annotations
 
 from datetime import date
 
-from collector.extract import ExtractedExhibition, draft_from_extract, rate_limit_wait
+from collector.extract import (
+    ExtractedExhibition,
+    draft_from_extract,
+    filter_selected_ids,
+    rate_limit_wait,
+)
 
 TODAY = date(2026, 10, 7)
 
@@ -73,6 +78,10 @@ def test_rate_limit_wait_is_at_least_a_minute() -> None:
     assert rate_limit_wait(details) == 60
     assert rate_limit_wait({}) == 60
     assert rate_limit_wait({"retryDelay": "90s"}) == 90
+
+
+def test_filter_selected_ids_keeps_only_known_ids() -> None:
+    assert filter_selected_ids([3, 99, 1, 1], {1, 3}) == [3, 1]
 
 
 def test_end_before_start_is_dropped() -> None:
