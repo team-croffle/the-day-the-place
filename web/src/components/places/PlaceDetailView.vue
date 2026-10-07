@@ -1,9 +1,16 @@
 <script setup lang="ts">
-import { API_ROUTES, PLACE_KIND_LABELS, type PlaceDetail, type PlaceKind } from '@nest-vue/shared';
+import {
+  API_ROUTES,
+  PLACE_KIND_LABELS,
+  type Exhibition,
+  type PlaceDetail,
+  type PlaceKind,
+} from '@nest-vue/shared';
 import { computed, onUnmounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { RouterLink } from 'vue-router';
 
+import ExhibitionCard from '@/components/exhibitions/ExhibitionCard.vue';
 import { ApiError, apiFetch } from '@/composables/useApi';
 
 const props = defineProps<{
@@ -16,6 +23,8 @@ const props = defineProps<{
 const { t, locale } = useI18n();
 
 const place = ref<PlaceDetail | null>(null);
+const exhibitions = ref<Exhibition[]>([]);
+const exhibitionsError = ref<string | null>(null);
 const error = ref<string | null>(null);
 const pending = ref(false);
 const tab = ref<'intro' | 'visit' | 'directions' | 'exhibitions'>('intro');
@@ -49,6 +58,8 @@ async function load(id: string): Promise<void> {
   pending.value = true;
   error.value = null;
   place.value = null;
+  exhibitions.value = [];
+  exhibitionsError.value = null;
   tab.value = 'intro';
   openIndex.value = null;
   try {
@@ -58,6 +69,9 @@ async function load(id: string): Promise<void> {
       return;
     }
     place.value = detail;
+    if (props.kind === 'museum') {
+      void loadExhibitions(detail.source, detail.id);
+    }
   } catch (cause) {
     error.value =
       cause instanceof ApiError && cause.status === 404
@@ -67,6 +81,17 @@ async function load(id: string): Promise<void> {
           : String(cause);
   } finally {
     pending.value = false;
+  }
+}
+
+async function loadExhibitions(source: string, id: string): Promise<void> {
+  exhibitions.value = [];
+  exhibitionsError.value = null;
+  try {
+    const params = new URLSearchParams({ placeSource: source, placeId: id });
+    exhibitions.value = await apiFetch<Exhibition[]>(`/${API_ROUTES.EXHIBITIONS}?${params}`);
+  } catch (cause) {
+    exhibitionsError.value = cause instanceof Error ? cause.message : t('places.exhibitionsError');
   }
 }
 
@@ -235,7 +260,17 @@ watch(
           </template>
           <template v-else>
             <h2 class="text-lg font-semibold">{{ t('places.tab.exhibitions') }}</h2>
-            <p class="text-muted mt-3 text-sm">{{ t('places.exhibitionsLater') }}</p>
+            <p v-if="exhibitionsError" class="mt-3 text-sm" role="alert">
+              {{ t('places.exhibitionsError') }}
+            </p>
+            <p v-else-if="exhibitions.length === 0" class="text-muted mt-3 text-sm">
+              {{ t('places.exhibitionsEmpty') }}
+            </p>
+            <ul v-else class="mt-4 space-y-4">
+              <li v-for="item in exhibitions" :key="item.id">
+                <ExhibitionCard :exhibition="item" />
+              </li>
+            </ul>
           </template>
         </div>
 
