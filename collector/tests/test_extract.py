@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import date
 
-from collector.extract import ExtractedExhibition, draft_from_extract
+from collector.extract import ExtractedExhibition, draft_from_extract, rate_limit_wait
 
 TODAY = date(2026, 10, 7)
 
@@ -49,6 +49,13 @@ def test_upcoming_and_ongoing() -> None:
     assert upcoming.status == "upcoming"
     assert ongoing is not None
     assert ongoing.status == "ongoing"
+
+
+def test_rate_limit_wait_is_at_least_a_minute() -> None:
+    details = {"error": {"details": [{"@type": "RetryInfo", "retryDelay": "36s"}]}}
+    assert rate_limit_wait(details) == 60
+    assert rate_limit_wait({}) == 60
+    assert rate_limit_wait({"retryDelay": "90s"}) == 90
 
 
 def test_end_before_start_is_dropped() -> None:

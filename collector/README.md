@@ -73,11 +73,12 @@ pnpm test:py
 | `TOUR_API_BASE_URL`   | X    | KorService2                 | 기관명 검색 베이스                                  |
 | `NEWS_KEYWORDS`       | X    | `특별전,기획전,박물관 전시` | 쉼표로 구분한 검색어                                |
 | `NEWS_DISPLAY`        | X    | `20`                        | 검색어마다 가져올 뉴스 수 (최대 100)                |
-| `GEMINI_CALL_LIMIT`   | X    | `30`                        | 한 번 실행의 Gemini 호출 상한                       |
+| `GEMINI_CALL_LIMIT`   | X    | `30`                        | 한 번 실행에서 답을 받을 Gemini 호출 상한           |
 | `GEMINI_MODEL`        | X    | `gemini-3.8-flash`          | 구조화 모델                                         |
 | `LOG_LEVEL`           | X    | `INFO`                      | `DEBUG`/`INFO`/`WARNING`/`ERROR`                    |
 | `DRY_RUN`             | X    | `false`                     | `true` 면 DB 에 쓰지 않는다                         |
 
+분당 한도(`429`)에 걸린 기사는 버리지 않는다. 응답의 대기 시간과 1분 중 더 긴 쪽을 쉰 뒤 같은 기사를 다시 부른다. 그 대기까지 포함해 10분이 지나면 남은 기사는 다음 실행으로 남긴다.
 같은 전시는 제목·기관명·시작일로 갱신한다. 시작일이나 종료일을 읽지 못하면 그 기사는 넣지 않는다.
 포스터는 기사 페이지의 `og:image`다. 없으면 전시 행만 남긴다.
 상태는 서울 날짜 기준으로 `upcoming` 또는 `ongoing`이다. 이미 끝난 전시는 넣지 않고, 저장 뒤에

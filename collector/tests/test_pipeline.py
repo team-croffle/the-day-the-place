@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import date
 
-from collector.extract import ExtractedExhibition
+from collector.extract import ExtractedExhibition, RateLimitedError
 from collector.news import NewsArticle, plain_text, split_keywords
 from collector.pipeline import build_drafts
 from collector.places import choose_tour_place
@@ -51,6 +51,90 @@ def test_gemini_limit_stops_calls() -> None:
 
     assert calls == ["https://a", "https://b"]
     assert len(drafts) == 2
+
+
+def test_rate_limit_retries_the_same_article() -> None:
+    seen: list[str] = []
+    sleeps: list[float] = []
+    clock = {"t": 0.0}
+
+    def extract(article: NewsArticle) -> ExtractedExhibition:
+        seen.append(article.url)
+        if len(seen) == 1:
+            raise RateLimitedError(60)
+        return _raw()
+
+    def sleep(seconds: float) -> None:
+        sleeps.append(seconds)
+        clock["t"] += seconds
+
+    drafts = build_drafts(
+        [_article("https://a"), _article("https://b")],
+        extract=extract,
+        match_place_name=lambda _name: None,
+        fetch_poster=lambda _url: None,
+        today=TODAY,
+        gemini_call_limit=2,
+        sleep=sleep,
+        monotonic=lambda: clock["t"],
+        budget_seconds=600,
+    )
+
+    assert seen == ["https://a", "https://a", "https://b"]
+    assert sleeps == [60]
+    assert len(drafts) == 2
+
+
+def test_rate_limit_retries_when_the_wait_lands_on_the_deadline() -> None:
+    seen: list[str] = []
+    clock = {"t": 540.0}
+
+    def extract(article: NewsArticle) -> ExtractedExhibition:
+        seen.append(article.url)
+        if len(seen) == 1:
+            raise RateLimitedError(60)
+        return _raw()
+
+    def sleep(seconds: float) -> None:
+        clock["t"] += seconds
+
+    drafts = build_drafts(
+        [_article("https://a")],
+        extract=extract,
+        match_place_name=lambda _name: None,
+        fetch_poster=lambda _url: None,
+        today=TODAY,
+        gemini_call_limit=1,
+        sleep=sleep,
+        monotonic=lambda: clock["t"],
+        budget_seconds=60,
+    )
+
+    assert seen == ["https://a", "https://a"]
+    assert len(drafts) == 1
+
+
+def test_rate_limit_stops_when_the_wait_exceeds_the_budget() -> None:
+    seen: list[str] = []
+
+    def extract(article: NewsArticle) -> ExtractedExhibition:
+        seen.append(article.url)
+        raise RateLimitedError(60)
+
+    drafts = build_drafts(
+        [_article("https://a"), _article("https://b")],
+        extract=extract,
+        match_place_name=lambda _name: None,
+        fetch_poster=lambda _url: None,
+        today=TODAY,
+        gemini_call_limit=10,
+        sleep=lambda _seconds: None,
+        monotonic=lambda: 0.0,
+        budget_seconds=30,
+    )
+
+    assert seen == ["https://a"]
+    assert drafts == []
 
 
 def test_place_is_attached_only_after_a_draft() -> None:
