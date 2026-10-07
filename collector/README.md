@@ -71,7 +71,7 @@ pnpm test:py
 | `NAVER_CLIENT_ID`     | O    | -                           | NAVER API HUB Client ID (`X-NCP-APIGW-API-KEY-ID`)  |
 | `NAVER_CLIENT_SECRET` | O    | -                           | NAVER API HUB Client Secret (`X-NCP-APIGW-API-KEY`) |
 | `GEMINI_API_KEY`      | O    | -                           | Google AI Studio                                    |
-| `TOUR_API_KEY`        | X    | `""`                        | 기관명 → `source+place_id` 연결용                   |
+| `TOUR_API_KEY`        | X    | `""`                        | 인코딩된 관광공사 키. 한 번만 디코드해서 보낸다     |
 | `TOUR_API_BASE_URL`   | X    | KorService2                 | 기관명 검색 베이스                                  |
 | `NEWS_KEYWORDS`       | X    | `특별전,기획전,박물관 전시` | 쉼표로 구분한 검색어                                |
 | `NEWS_DISPLAY`        | X    | `100`                       | 검색어마다 가져올 최신 뉴스 수 (최대 100)           |
