@@ -2,9 +2,10 @@
 
 「그 날, 그 곳」 특별전 수집기. 하루 한 번 실행되는 배치 프로세스다.
 
-`run()` 한 번이 문화공공데이터 전시정보(통합)을 먼저 읽고, 이어서 네이버 뉴스 최신 기사를 찾는다.
-Gemini로 특별전 기사만 고른 뒤 본문에서 제목·기간·기관·소개를 뽑는다. 같은 전시는 통합 쪽을 남기고
+`run()` 한 번이 네이버 뉴스 최신 기사를 찾는다.
+Gemini로 특별전 기사만 고른 뒤 본문에서 제목·기간·기관·소개를 뽑고
 `exhibitions`에 upsert한다. 종료일이 지난 행을 지운다. `DRY_RUN=true`면 DB에 쓰지 않는다.
+전시정보(통합)은 수집하지 않는다. 화면이 그 API를 직접 읽는다.
 
 ## 구성
 
@@ -16,8 +17,8 @@ collector/
 ├── uv.lock
 ├── src/collector/
 │   ├── __main__.py       # python -m collector (로컬/Docker 공통 진입점)
-│   ├── pipeline.py       # run() — 전시정보(통합) → 뉴스 → 선별 → 본문 → 저장
-│   ├── culture.py        # 문화공공데이터 전시정보(통합)
+│   ├── pipeline.py       # run() — 뉴스 → 선별 → 본문 → 저장
+│   ├── culture.py        # 전시정보(통합) 파서. 수집 경로에서는 부르지 않는다
 │   ├── news.py           # 네이버 뉴스 검색
 │   ├── extract.py        # Gemini 선별과 본문 구조화. 날짜 없으면 버림
 │   ├── poster.py         # 기사 페이지의 og:image와 본문
@@ -74,7 +75,7 @@ pnpm test:py
 | `GEMINI_API_KEY`      | O    | -                           | Google AI Studio                                    |
 | `TOUR_API_KEY`        | X    | `""`                        | 인코딩된 관광공사 키. 한 번만 디코드해서 보낸다     |
 | `TOUR_API_BASE_URL`   | X    | KorService2                 | 기관명 검색 베이스                                  |
-| `CULTURE_API_KEY`     | X    | `""`                        | 전시정보(통합) 서비스키. 없으면 그 출처는 건너뛴다  |
+| `CULTURE_API_KEY`     | X    | `""`                        | 화면용 전시정보(통합) 키. 수집기는 저장하지 않는다  |
 | `CULTURE_API_URL`     | X    | API_CCA_145                 | 전시정보(통합) 요청 주소                            |
 | `NEWS_KEYWORDS`       | X    | `특별전,기획전,박물관 전시` | 쉼표로 구분한 검색어                                |
 | `NEWS_DISPLAY`        | X    | `100`                       | 검색어마다 가져올 최신 뉴스 수 (최대 100)           |
