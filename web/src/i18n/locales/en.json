@@ -13,9 +13,9 @@
     "signup": "Sign up"
   },
   "home": {
-    "heroEyebrow": "Coming soon",
+    "heroEyebrow": "On view now",
     "heroTitle": "Places from that day will open here",
-    "heroBody": "Live exhibition data comes in a later version. This is the page shell.",
+    "heroBody": "Special exhibitions at museums and historic sites.",
     "heroCta": "Exhibitions",
     "search": "Search",
     "searchPlaceholder": "Search museums, sites, exhibitions…",
@@ -77,7 +77,8 @@
     "photos": "Photos",
     "openPhoto": "View larger",
     "closePhoto": "Close",
-    "exhibitionsLater": "Exhibitions for this place come in a later version.",
+    "exhibitionsEmpty": "No current exhibition for this place.",
+    "exhibitionsError": "Could not load exhibitions.",
     "designations": "National heritage here",
     "noDesignations": "No national heritage matched this name.",
     "designationsError": "National heritage here could not be loaded.",
@@ -103,7 +104,20 @@
   },
   "exhibitions": {
     "heading": "Exhibitions",
-    "body": "Upcoming and current shows land in v0.3."
+    "body": "Museums, historic sites, and special exhibitions in one place.",
+    "ongoingCount": "{n} on view",
+    "upcomingCount": "{n} upcoming",
+    "searchPlaceholder": "Search a title, museum, or keyword…",
+    "statusAll": "All",
+    "ongoingTitle": "On view",
+    "upcomingTitle": "Upcoming",
+    "readMore": "Read more",
+    "loading": "Loading exhibitions…",
+    "empty": "No exhibitions match.",
+    "status": {
+      "ongoing": "On view",
+      "upcoming": "Upcoming"
+    }
   },
   "auth": {
     "loginHeading": "Log in",

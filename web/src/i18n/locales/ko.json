@@ -13,9 +13,9 @@
     "signup": "회원가입"
   },
   "home": {
-    "heroEyebrow": "준비 중",
+    "heroEyebrow": "지금 열린 특별전",
     "heroTitle": "그 날의 장소가 곧 열립니다",
-    "heroBody": "특별전 실데이터는 이후 버전에서 붙입니다. 지금은 화면 구성만 둡니다.",
+    "heroBody": "박물관과 유적에서 열리는 특별전을 모았습니다.",
     "heroCta": "특별전 목록",
     "search": "검색",
     "searchPlaceholder": "박물관, 유적지, 특별전 검색…",
@@ -77,7 +77,8 @@
     "photos": "사진",
     "openPhoto": "크게 보기",
     "closePhoto": "닫기",
-    "exhibitionsLater": "이 장소의 전시는 이후 버전에서 붙입니다.",
+    "exhibitionsEmpty": "이 장소의 진행 중인 특별전이 없습니다.",
+    "exhibitionsError": "전시를 불러오지 못했습니다.",
     "designations": "이곳의 국가유산",
     "noDesignations": "이 이름으로 찾은 국가유산이 없습니다.",
     "designationsError": "이곳의 국가유산을 불러오지 못했습니다.",
@@ -102,8 +103,21 @@
     "heroBody": "역사 관광지를 찾습니다."
   },
   "exhibitions": {
-    "heading": "특별전",
-    "body": "예정·진행 전시는 v0.3에서 채웁니다."
+    "heading": "전시 · 특별전",
+    "body": "전국 박물관·유적지와 특별전을 한곳에서 확인하세요.",
+    "ongoingCount": "진행 중 {n}건",
+    "upcomingCount": "예정 {n}건",
+    "searchPlaceholder": "전시, 박물관, 키워드 검색…",
+    "statusAll": "전체",
+    "ongoingTitle": "진행중인 전시",
+    "upcomingTitle": "예정된 전시",
+    "readMore": "자세히 보기",
+    "loading": "전시를 불러오는 중…",
+    "empty": "조건에 맞는 전시가 없습니다.",
+    "status": {
+      "ongoing": "진행중",
+      "upcoming": "예정"
+    }
   },
   "auth": {
     "loginHeading": "로그인",

@@ -1,12 +1,29 @@
 <script setup lang="ts">
+import { API_ROUTES, type Exhibition } from '@nest-vue/shared';
+import { computed, onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { RouterLink } from 'vue-router';
 
+import ExhibitionCard from '@/components/exhibitions/ExhibitionCard.vue';
 import HomeSearch from '@/components/home/HomeSearch.vue';
+import { apiFetch } from '@/composables/useApi';
 
 const { t } = useI18n();
 
-const exhibitionSlots = 4;
+const exhibitions = ref<Exhibition[]>([]);
+
+onMounted(async () => {
+  try {
+    exhibitions.value = await apiFetch<Exhibition[]>(`/${API_ROUTES.EXHIBITIONS}`);
+  } catch {
+    exhibitions.value = [];
+  }
+});
+
+const ongoing = computed(() =>
+  exhibitions.value.filter((item) => item.status === 'ongoing').slice(0, 4),
+);
+const featured = computed(() => ongoing.value[0] ?? null);
 const siteSlots = 6;
 const eraTabs = [
   'home.eraAll',
@@ -31,9 +48,15 @@ const eras = [
         aria-hidden="true"
       />
       <div class="relative mx-auto flex min-h-[28rem] max-w-6xl flex-col justify-end px-6 pb-20">
-        <p class="text-gold text-xs tracking-widest uppercase">{{ t('home.heroEyebrow') }}</p>
-        <h1 class="mt-3 max-w-xl text-3xl font-semibold sm:text-4xl">{{ t('home.heroTitle') }}</h1>
-        <p class="text-paper/80 mt-3 max-w-lg text-sm">{{ t('home.heroBody') }}</p>
+        <p class="text-gold text-xs tracking-widest uppercase">
+          {{ featured ? t(`exhibitions.status.${featured.status}`) : t('home.heroEyebrow') }}
+        </p>
+        <h1 class="mt-3 max-w-xl text-3xl font-semibold sm:text-4xl">
+          {{ featured ? featured.title : t('home.heroTitle') }}
+        </h1>
+        <p class="text-paper/80 mt-3 max-w-lg text-sm">
+          {{ featured ? featured.summary : t('home.heroBody') }}
+        </p>
         <RouterLink
           to="/exhibitions"
           class="bg-gold text-ink hover:bg-gold-hover mt-6 inline-flex w-fit rounded-sm px-4 py-2 text-sm font-medium"
@@ -57,17 +80,12 @@ const eras = [
           {{ t('home.seeAll') }}
         </RouterLink>
       </div>
-      <ul class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <li
-          v-for="n in exhibitionSlots"
-          :key="n"
-          class="bg-paper overflow-hidden rounded-md shadow-sm"
-        >
-          <div class="bg-line h-40" />
-          <div class="p-4">
-            <p class="text-sm font-medium">{{ t('home.placeholderTitle') }}</p>
-            <p class="text-muted mt-1 text-xs">{{ t('home.placeholderSoon') }}</p>
-          </div>
+      <p v-if="ongoing.length === 0" class="text-muted text-sm">{{ t('exhibitions.empty') }}</p>
+      <ul v-else class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <li v-for="item in ongoing" :key="item.id">
+          <RouterLink to="/exhibitions" class="block">
+            <ExhibitionCard :exhibition="item" />
+          </RouterLink>
         </li>
       </ul>
     </section>
