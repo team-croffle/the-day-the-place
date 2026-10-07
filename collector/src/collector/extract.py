@@ -47,6 +47,7 @@ class ExhibitionDraft:
     place_name: str
     summary: str
     source_url: str | None
+    image_url: str | None = None
     place_source: str | None = None
     place_id: str | None = None
 

@@ -44,6 +44,7 @@ def test_gemini_limit_stops_calls() -> None:
         [_article("https://a"), _article("https://b"), _article("https://c")],
         extract=extract,
         match_place_name=lambda _name: None,
+        fetch_poster=lambda _url: None,
         today=TODAY,
         gemini_call_limit=2,
     )
@@ -64,10 +65,17 @@ def test_place_is_attached_only_after_a_draft() -> None:
         looked_up.append(name)
         return ("tour", "126508")
 
+    opened: list[str] = []
+
+    def poster(url: str) -> str:
+        opened.append(url)
+        return "https://cdn.example.test/poster.jpg"
+
     drafts = build_drafts(
         [_article("https://example.test/skip"), _article("https://example.test/keep")],
         extract=extract,
         match_place_name=match,
+        fetch_poster=poster,
         today=TODAY,
         gemini_call_limit=10,
     )
@@ -75,6 +83,8 @@ def test_place_is_attached_only_after_a_draft() -> None:
     assert looked_up == ["국립중앙박물관"]
     assert drafts[0].place_source == "tour"
     assert drafts[0].place_id == "126508"
+    assert opened == ["https://example.test/keep"]
+    assert drafts[0].image_url == "https://cdn.example.test/poster.jpg"
 
 
 def test_choose_tour_place_skips_other_content_types() -> None:

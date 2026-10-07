@@ -25,6 +25,7 @@ export const exhibitions = pgTable(
     placeId: text(),
     placeName: text().notNull(),
     summary: text().notNull(),
+    imageUrl: text(),
     collectedAt: timestamp({ withTimezone: true, mode: 'date' }).notNull().defaultNow(),
     sourceUrl: text(),
   },
