@@ -139,7 +139,7 @@ def run(settings: Settings) -> None:
                 "dry-run %s | %s | %s~%s | %s",
                 draft.status,
                 draft.title,
-                draft.starts_on.isoformat(),
+                draft.starts_on.isoformat() if draft.starts_on else "",
                 draft.ends_on.isoformat(),
                 draft.place_name,
             )

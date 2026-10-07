@@ -37,8 +37,44 @@ INSERT INTO exhibitions (
     %(collected_at)s,
     %(source_url)s
 )
-ON CONFLICT (title, place_name, starts_on) DO UPDATE SET
+ON CONFLICT (title, place_name, starts_on) WHERE starts_on IS NOT NULL DO UPDATE SET
     ends_on = EXCLUDED.ends_on,
+    status = EXCLUDED.status,
+    place_source = EXCLUDED.place_source,
+    place_id = EXCLUDED.place_id,
+    summary = EXCLUDED.summary,
+    image_url = COALESCE(EXCLUDED.image_url, exhibitions.image_url),
+    collected_at = EXCLUDED.collected_at,
+    source_url = EXCLUDED.source_url
+"""
+
+_UPSERT_UNKNOWN_START = """
+INSERT INTO exhibitions (
+    title,
+    starts_on,
+    ends_on,
+    status,
+    place_source,
+    place_id,
+    place_name,
+    summary,
+    image_url,
+    collected_at,
+    source_url
+) VALUES (
+    %(title)s,
+    NULL,
+    %(ends_on)s,
+    %(status)s,
+    %(place_source)s,
+    %(place_id)s,
+    %(place_name)s,
+    %(summary)s,
+    %(image_url)s,
+    %(collected_at)s,
+    %(source_url)s
+)
+ON CONFLICT (title, place_name, ends_on) WHERE starts_on IS NULL DO UPDATE SET
     status = EXCLUDED.status,
     place_source = EXCLUDED.place_source,
     place_id = EXCLUDED.place_id,
@@ -57,7 +93,7 @@ def save_exhibitions(database_url: str, drafts: list[ExhibitionDraft], today: da
     with psycopg.connect(database_url) as conn, conn.cursor() as cur:
         for draft in drafts:
             cur.execute(
-                _UPSERT,
+                _UPSERT if draft.starts_on is not None else _UPSERT_UNKNOWN_START,
                 {
                     "title": draft.title,
                     "starts_on": draft.starts_on,
