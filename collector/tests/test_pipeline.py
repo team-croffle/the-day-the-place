@@ -192,6 +192,31 @@ def test_rate_limit_stops_when_the_wait_exceeds_the_budget() -> None:
     assert drafts == []
 
 
+def test_unopened_page_stays_for_the_next_run() -> None:
+    done: set[str] = set()
+    opened: list[str] = []
+
+    def fetch_page(url: str) -> tuple[str | None, str] | None:
+        opened.append(url)
+        if url.endswith("/fail"):
+            return None
+        return _page(url)
+
+    drafts = build_drafts(
+        [_article("https://example.test/fail"), _article("https://example.test/later")],
+        select_ids=_select_all,
+        fetch_page=fetch_page,
+        extract_body=_one,
+        match_place_name=lambda _name: None,
+        today=TODAY,
+        done=done,
+    )
+
+    assert opened == ["https://example.test/fail"]
+    assert done == set()
+    assert drafts == []
+
+
 def test_budget_leaves_the_next_batch() -> None:
     clock = {"n": 0}
 

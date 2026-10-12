@@ -80,8 +80,8 @@ function upsertSql(draft: IngestDraftDto, collectedAt: Date) {
       ON CONFLICT (title, place_name, starts_on) WHERE starts_on IS NOT NULL DO UPDATE SET
         ends_on = EXCLUDED.ends_on,
         status = EXCLUDED.status,
-        place_source = EXCLUDED.place_source,
-        place_id = EXCLUDED.place_id,
+        place_source = COALESCE(EXCLUDED.place_source, exhibitions.place_source),
+        place_id = COALESCE(EXCLUDED.place_id, exhibitions.place_id),
         summary = EXCLUDED.summary,
         image_url = COALESCE(EXCLUDED.image_url, exhibitions.image_url),
         collected_at = EXCLUDED.collected_at,
@@ -100,8 +100,8 @@ function upsertSql(draft: IngestDraftDto, collectedAt: Date) {
     )
     ON CONFLICT (title, place_name, ends_on) WHERE starts_on IS NULL DO UPDATE SET
       status = EXCLUDED.status,
-      place_source = EXCLUDED.place_source,
-      place_id = EXCLUDED.place_id,
+      place_source = COALESCE(EXCLUDED.place_source, exhibitions.place_source),
+      place_id = COALESCE(EXCLUDED.place_id, exhibitions.place_id),
       summary = EXCLUDED.summary,
       image_url = COALESCE(EXCLUDED.image_url, exhibitions.image_url),
       collected_at = EXCLUDED.collected_at,

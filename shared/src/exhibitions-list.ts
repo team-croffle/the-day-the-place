@@ -1,5 +1,5 @@
 import { placeAddressInRegion } from './constants/place-categories';
-import type { Exhibition, ExhibitionListQuery } from './types/exhibition';
+import type { Exhibition, ExhibitionListQuery, ExhibitionStatus } from './types/exhibition';
 
 const MAP_PLACE = /박물관|기념관|전시관/;
 
@@ -8,7 +8,7 @@ export function isExhibitionPlace(placeName: string): boolean {
   return MAP_PLACE.test(placeName);
 }
 
-/** 오늘(YYYY-MM-DD) 이후만 남기고, 같은 전시를 한 건으로 모은 뒤 검색·상태·지역·장소로 거른다. */
+/** 오늘(YYYY-MM-DD) 이후만 남긴다. 예정·진행은 시작일로 다시 계산한 뒤, 같은 전시를 모으고 검색·지역·장소로 거른다. */
 export function selectExhibitions(
   rows: readonly Exhibition[],
   query: ExhibitionListQuery,
@@ -18,7 +18,9 @@ export function selectExhibitions(
   const region = query.region && query.region !== 'all' ? query.region : '';
 
   return collapseExhibitions(
-    rows.filter((row) => row.endsOn >= today && isExhibitionPlace(row.placeName)),
+    rows
+      .map((row) => withStatusOn(row, today))
+      .filter((row) => row.endsOn >= today && isExhibitionPlace(row.placeName)),
   )
     .filter((row) => (query.status ? row.status === query.status : true))
     .filter((row) => (region ? placeAddressInRegion(row.placeName, region) : true))
@@ -35,6 +37,12 @@ export function selectExhibitions(
       return [row.title, row.placeName, row.summary].join('\n').toLowerCase().includes(q);
     })
     .toSorted(compareExhibitions);
+}
+
+/** 저장된 상태와 관계없이 시작일과 오늘로 예정·진행을 가른다. 시작일이 없으면 진행이다. */
+function withStatusOn(row: Exhibition, today: string): Exhibition {
+  const status: ExhibitionStatus = row.startsOn && today < row.startsOn ? 'upcoming' : 'ongoing';
+  return status === row.status ? row : { ...row, status };
 }
 
 function collapseExhibitions(rows: readonly Exhibition[]): Exhibition[] {
