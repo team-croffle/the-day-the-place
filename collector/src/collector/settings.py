@@ -53,7 +53,7 @@ class Settings(BaseSettings):
         default=100,
         ge=1,
         le=100,
-        description="검색어마다 남길 연합뉴스 수. 모자라면 다음 페이지를 읽는다",
+        description="네이버 한 페이지 건수. 수집 건수 상한은 아니다",
     )
     gemini_model: str = Field(default="gemini-3.8-flash", description="구조화에 쓸 Gemini 모델")
 

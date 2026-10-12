@@ -27,7 +27,7 @@ from collector.news import NewsArticle, fetch_news
 from collector.places import match_place
 from collector.poster import fetch_article_page
 from collector.settings import Settings
-from collector.store import save_exhibitions
+from collector.store import load_news_cursor, next_news_cursor, save_exhibitions, save_news_cursor
 
 logger = logging.getLogger(__name__)
 
@@ -52,6 +52,7 @@ def build_drafts(
     monotonic: Callable[[], float] = time.monotonic,
     budget_seconds: float = _GEMINI_BUDGET_SECONDS,
     batch_size: int = _SELECT_BATCH,
+    done: set[str] | None = None,
 ) -> list[ExhibitionDraft]:
     """제목 묶음으로 기사를 고르고, 고른 기사만 열어 전시를 뽑는다.
 
@@ -85,6 +86,10 @@ def build_drafts(
         waits += waited
         allowed = {article_id for article_id, _article in batch}
         by_id = dict(batch)
+        chosen_ids = set(filter_selected_ids(chosen, allowed))
+        for article_id, article in batch:
+            if article_id not in chosen_ids:
+                _remember(done, article)
         for article_id in filter_selected_ids(chosen, allowed):
             article = by_id[article_id]
             page = _page_within_budget(
@@ -98,6 +103,7 @@ def build_drafts(
                 break
             image_url, body = page
             if not body.strip():
+                _remember(done, article)
                 continue
 
             def extract_current(
@@ -119,6 +125,7 @@ def build_drafts(
             raws, body_waits = extracted
             calls += 1
             waits += body_waits
+            _remember(done, article)
             drafts.extend(
                 _drafts_from_article(
                     article,
@@ -134,6 +141,11 @@ def build_drafts(
         logger.info("Gemini 시간 한도, 남은 기사는 다음 실행으로 남긴다")
     logger.info("gemini_calls=%s drafts=%s rate_limit_waits=%s", calls, len(drafts), waits)
     return drafts
+
+
+def _remember(done: set[str] | None, article: NewsArticle) -> None:
+    if done is not None:
+        done.add(article.url)
 
 
 def _batches(
@@ -216,8 +228,20 @@ def run(settings: Settings) -> None:
     today = seoul_today()
     logger.info("collector start (dry_run=%s today=%s)", settings.dry_run, today.isoformat())
 
+    cursor = None if settings.dry_run else load_news_cursor(settings.database_url)
+    seen_through = None if cursor is None else cursor.seen_through
+    resume_before = None if cursor is None else cursor.resume_before
+
     with httpx.Client(timeout=20.0) as client:
-        articles = fetch_news(client, settings)
+        articles = _newest_first(
+            fetch_news(
+                client,
+                settings,
+                seen_through=seen_through,
+                resume_before=resume_before,
+            )
+        )
+        done: set[str] = set()
         drafts = build_drafts(
             articles,
             select_ids=lambda batch: select_article_ids(settings, batch),
@@ -225,6 +249,7 @@ def run(settings: Settings) -> None:
             extract_body=lambda article, body: extract_exhibitions(settings, article, body),
             match_place_name=lambda place_name: match_place(client, settings, place_name),
             today=today,
+            done=done,
         )
 
     if settings.dry_run:
@@ -241,4 +266,17 @@ def run(settings: Settings) -> None:
         return
 
     deleted = save_exhibitions(settings.database_url, drafts, today)
+    advanced = next_news_cursor(cursor, articles, done)
+    if advanced is not None:
+        save_news_cursor(settings.database_url, advanced)
     logger.info("collector done (drafts=%s deleted_ended=%s)", len(drafts), deleted)
+
+
+def _newest_first(articles: list[NewsArticle]) -> list[NewsArticle]:
+    return sorted(articles, key=_published_key, reverse=True)
+
+
+def _published_key(article: NewsArticle) -> datetime:
+    if article.published_at is None:
+        return datetime.min.replace(tzinfo=_SEOUL)
+    return article.published_at

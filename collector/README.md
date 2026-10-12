@@ -67,23 +67,23 @@ pnpm test:py
 
 `.env.example` 은 의도적으로 빈 파일이다.
 
-| 변수                  | 필수 | 기본값                      | 설명                                                |
-| --------------------- | ---- | --------------------------- | --------------------------------------------------- |
-| `DATABASE_URL`        | O    | -                           | `postgresql://user:pass@host:5432/db`               |
-| `NAVER_CLIENT_ID`     | O    | -                           | NAVER API HUB Client ID (`X-NCP-APIGW-API-KEY-ID`)  |
-| `NAVER_CLIENT_SECRET` | O    | -                           | NAVER API HUB Client Secret (`X-NCP-APIGW-API-KEY`) |
-| `GEMINI_API_KEY`      | O    | -                           | Google AI Studio                                    |
-| `TOUR_API_KEY`        | X    | `""`                        | 인코딩된 관광공사 키. 한 번만 디코드해서 보낸다     |
-| `TOUR_API_BASE_URL`   | X    | KorService2                 | 기관명 검색 베이스                                  |
-| `CULTURE_API_KEY`     | X    | `""`                        | 화면용 전시정보(통합) 키. 수집기는 저장하지 않는다  |
-| `CULTURE_API_URL`     | X    | API_CCA_145                 | 전시정보(통합) 요청 주소                            |
-| `NEWS_KEYWORDS`       | X    | `특별전,기획전,박물관 전시` | 쉼표로 구분한 검색어                                |
-| `NEWS_DISPLAY`        | X    | `100`                       | 검색어마다 가져올 최신 뉴스 수 (최대 100)           |
-| `GEMINI_MODEL`        | X    | `gemini-3.8-flash`          | 구조화 모델                                         |
-| `LOG_LEVEL`           | X    | `INFO`                      | `DEBUG`/`INFO`/`WARNING`/`ERROR`                    |
-| `DRY_RUN`             | X    | `false`                     | `true` 면 DB 에 쓰지 않는다                         |
+| 변수                  | 필수 | 기본값                      | 설명                                                      |
+| --------------------- | ---- | --------------------------- | --------------------------------------------------------- |
+| `DATABASE_URL`        | O    | -                           | `postgresql://user:pass@host:5432/db`                     |
+| `NAVER_CLIENT_ID`     | O    | -                           | NAVER API HUB Client ID (`X-NCP-APIGW-API-KEY-ID`)        |
+| `NAVER_CLIENT_SECRET` | O    | -                           | NAVER API HUB Client Secret (`X-NCP-APIGW-API-KEY`)       |
+| `GEMINI_API_KEY`      | O    | -                           | Google AI Studio                                          |
+| `TOUR_API_KEY`        | X    | `""`                        | 인코딩된 관광공사 키. 한 번만 디코드해서 보낸다           |
+| `TOUR_API_BASE_URL`   | X    | KorService2                 | 기관명 검색 베이스                                        |
+| `CULTURE_API_KEY`     | X    | `""`                        | 화면용 전시정보(통합) 키. 수집기는 저장하지 않는다        |
+| `CULTURE_API_URL`     | X    | API_CCA_145                 | 전시정보(통합) 요청 주소                                  |
+| `NEWS_KEYWORDS`       | X    | `특별전,기획전,박물관 전시` | 쉼표로 구분한 검색어                                      |
+| `NEWS_DISPLAY`        | X    | `100`                       | 네이버 한 페이지 건수 (최대 100). 수집 건수 상한은 아니다 |
+| `GEMINI_MODEL`        | X    | `gemini-3.8-flash`          | 구조화 모델                                               |
+| `LOG_LEVEL`           | X    | `INFO`                      | `DEBUG`/`INFO`/`WARNING`/`ERROR`                          |
+| `DRY_RUN`             | X    | `false`                     | `true` 면 DB 에 쓰지 않는다                               |
 
-검색어마다 뒤에 `연합뉴스`를 붙이고, 연합뉴스가 100건이 될 때까지 다음 페이지를 읽는다. 네이버는 검색어마다 1000건까지만 준다. `yna.co.kr` 이거나 네이버 언론사 번호가 001인 기사만 남긴다. 20건씩 id를 붙여 Gemini에 넘기고, 박물관·기념관·전시관·유적의 특별전·기획전 id만 받는다. 목록에 없는 id는 버린다. 고른 기사만 열어 `og:image`(로고·아이콘 주소는 제외)와 본문을 읽고, 본문을 Gemini에 다시 넘겨 전시를 뽑는다. 한 기사에 여러 건이면 모두 남긴다. 분당 한도(`429`)에 걸린 호출은 버리지 않는다. 응답의 대기 시간과 1분 중 더 긴 쪽을 쉰 뒤 같은 호출을 다시 한다. 그 대기까지 포함해 10분이 지나면 남은 기사는 다음 실행으로 남긴다.
+검색어마다 뒤에 `연합뉴스`를 붙인다. 저장된 수집 시각이 없으면 검색어마다 최신 1000건 창을 읽고, 그 안의 연합뉴스를 모두 가져온다. 한 번 처리가 끝나면 가장 새로 처리한 기사 시각을 남긴다. 다음 실행은 그 시각보다 새로운 기사만 읽고, 그 시각 이하가 나오면 페이지를 멈춘다. 시간 한도로 중간에 끊기면 그 시각보다 오래된 기사는 다음 실행에 남긴다. `DRY_RUN=true` 면 이 시각을 쓰지 않는다. `yna.co.kr` 이거나 네이버 언론사 번호가 001인 기사만 남긴다. 20건씩 id를 붙여 Gemini에 넘기고, 박물관·기념관·전시관·유적의 특별전·기획전 id만 받는다. 목록에 없는 id는 버린다. 고른 기사만 열어 `og:image`(로고·아이콘 주소는 제외)와 본문을 읽고, 본문을 Gemini에 다시 넘겨 전시를 뽑는다. 한 기사에 여러 건이면 모두 남긴다. 분당 한도(`429`)에 걸린 호출은 버리지 않는다. 응답의 대기 시간과 1분 중 더 긴 쪽을 쉰 뒤 같은 호출을 다시 한다. 그 대기까지 포함해 10분이 지나면 남은 기사는 다음 실행으로 남긴다.
 같은 전시는 제목·기관명·시작일로 갱신한다. 시작일을 모르는 진행 중 전시는 제목·기관명·종료일로 갱신한다. 종료일을 읽지 못하면 그 기사는 넣지 않는다. 진행 중인데 시작일만 없으면 남긴다.
 포스터는 기사 페이지의 `og:image`다. 로고·아이콘 주소이거나 없으면 전시 행만 남긴다.
 상태는 서울 날짜 기준으로 `upcoming` 또는 `ongoing`이다. 이미 끝난 전시는 넣지 않고, 저장 뒤에
@@ -91,7 +91,7 @@ pnpm test:py
 
 ## 스키마 소유권
 
-`exhibitions` 테이블은 **Drizzle(`server/`)이 소유**한다.
+`exhibitions` 와 `news_collect_cursors` 테이블은 **Drizzle(`server/`)이 소유**한다.
 수집기는 마이그레이션을 갖지 않고 INSERT / DELETE 만 한다.
 컬럼을 바꾸려면 `server/src/database/schema/` 를 고치고 `pnpm db:generate` → `pnpm db:migrate`.
 
@@ -108,11 +108,12 @@ uv run modal run modal_app.py            # 1회 수동 실행
 uv run modal deploy modal_app.py         # 배포 + 스케줄 등록
 ```
 
-스케줄은 `modal_app.py` 의 `SCHEDULE` 상수를 채우면 등록된다. **비워 두면 스케줄 없이 배포**되고
-수동 실행만 가능하다. Modal 의 기본 타임존은 UTC 이므로 KST 로 생각한다면 반드시 명시할 것.
+스케줄은 `modal_app.py` 의 `SCHEDULE` 에 매일 03:00(Asia/Seoul)로 들어 있다.
+`modal deploy` 를 해야 등록된다. 이 저장소에 코드를 넣는 것만으로는 돌지 않는다.
+Modal 의 기본 타임존은 UTC 이므로 `timezone` 을 명시해 두었다.
 
 ```python
-SCHEDULE = modal.Cron("0 4 * * *", timezone="Asia/Seoul")  # 매일 KST 04:00
+SCHEDULE = modal.Cron("0 3 * * *", timezone="Asia/Seoul")  # 매일 KST 03:00
 ```
 
 `modal.Period` 는 **재배포할 때마다 타이머가 리셋**되므로 일 단위 배치에는 `Cron` 을 쓴다.
@@ -142,7 +143,7 @@ gcloud run jobs create geunal-collector \
 
 gcloud scheduler jobs create http geunal-collector-daily \
   --location asia-northeast3 \
-  --schedule "0 4 * * *" --time-zone "Asia/Seoul" \
+  --schedule "0 3 * * *" --time-zone "Asia/Seoul" \
   --uri "https://asia-northeast3-run.googleapis.com/apis/run.googleapis.com/v1/namespaces/$PROJECT/jobs/geunal-collector:run" \
   --http-method POST \
   --oauth-service-account-email $SCHEDULER_SA
