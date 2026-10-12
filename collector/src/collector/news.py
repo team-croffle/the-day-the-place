@@ -99,11 +99,12 @@ def _search_keyword(
     seen_through: datetime | None,
     resume_before: datetime | None,
 ) -> list[NewsArticle]:
-    """첫 수집은 1000건 창을 읽고, 이후에는 이미 처리한 시각에서 멈춘다."""
+    """연합뉴스가 상한만큼 차거나, 이미 처리한 시각에 닿으면 멈춘다."""
     found: list[NewsArticle] = []
     seen: set[str] = set()
     start = 1
-    while start <= _MAX_WINDOW:
+    limit = settings.news_yonhap_limit
+    while start <= _MAX_WINDOW and len(found) < limit:
         size = min(settings.news_display, _MAX_WINDOW - start + 1)
         try:
             raw_count, batch, reached_old = _search_page(
@@ -126,10 +127,10 @@ def _search_keyword(
                 continue
             seen.add(article.url)
             found.append(article)
-        if reached_old or raw_count < size:
+        if reached_old or raw_count < size or len(found) >= limit:
             break
         start += size
-    return found
+    return found[:limit]
 
 
 def fetch_news(

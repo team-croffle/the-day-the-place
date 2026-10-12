@@ -66,6 +66,12 @@ class Settings(BaseSettings):
         le=100,
         description="네이버 한 페이지 건수. 수집 건수 상한은 아니다",
     )
+    news_yonhap_limit: int = Field(
+        default=200,
+        ge=1,
+        le=1000,
+        description="검색어마다 받을 연합뉴스 상한",
+    )
     gemini_model: str = Field(default="gemini-3.8-flash", description="구조화에 쓸 Gemini 모델")
 
     # --- 실행 옵션 ----------------------------------------------------------

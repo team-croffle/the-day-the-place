@@ -95,6 +95,39 @@ def test_news_search_reads_the_next_page_through_the_window() -> None:
     assert [article.url for article in articles] == ["https://www.yna.co.kr/view/AKR1"]
 
 
+def test_news_search_stops_after_the_yonhap_limit() -> None:
+    starts: list[str] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        start = request.url.params["start"]
+        starts.append(start)
+        number = start
+        return httpx.Response(
+            200,
+            json={
+                "items": [
+                    {
+                        "title": f"특별전 {number}",
+                        "description": "연합뉴스",
+                        "originallink": f"https://www.yna.co.kr/view/{number}",
+                        "link": f"https://n.news.naver.com/article/001/{number}",
+                        "pubDate": "Mon, 12 Oct 2026 09:00:00 +0900",
+                    }
+                ]
+            },
+        )
+
+    settings = _settings().model_copy(update={"news_display": 1, "news_yonhap_limit": 2})
+    with httpx.Client(transport=httpx.MockTransport(handler)) as client:
+        articles = fetch_news(client, settings)
+
+    assert starts == ["1", "2"]
+    assert [article.url for article in articles] == [
+        "https://www.yna.co.kr/view/1",
+        "https://www.yna.co.kr/view/2",
+    ]
+
+
 def test_news_search_stops_at_the_collected_time() -> None:
     starts: list[str] = []
 
