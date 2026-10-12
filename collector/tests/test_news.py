@@ -1,9 +1,13 @@
 from __future__ import annotations
 
+from datetime import datetime, timedelta, timezone
+
 import httpx
 
 from collector.news import fetch_news
 from collector.settings import Settings
+
+_KST = timezone(timedelta(hours=9))
 
 
 def _settings() -> Settings:
@@ -57,7 +61,7 @@ def test_news_search_keeps_only_yonhap() -> None:
     ]
 
 
-def test_news_search_reads_the_next_page_until_the_yonhap_quota() -> None:
+def test_news_search_reads_the_next_page_through_the_window() -> None:
     starts: list[str] = []
 
     def handler(request: httpx.Request) -> httpx.Response:
@@ -69,20 +73,95 @@ def test_news_search_reads_the_next_page_until_the_yonhap_quota() -> None:
                 "description": "인용",
                 "originallink": "https://www.example.com/news/1",
                 "link": "https://n.news.naver.com/article/023/1",
+                "pubDate": "Sun, 12 Oct 2026 09:00:00 +0900",
             }
-        else:
+        elif start == "2":
             item = {
                 "title": "우리들의 밥상",
                 "description": "연합뉴스",
                 "originallink": "https://www.yna.co.kr/view/AKR1",
                 "link": "https://n.news.naver.com/article/001/1",
+                "pubDate": "Sat, 11 Oct 2026 09:00:00 +0900",
             }
+        else:
+            return httpx.Response(200, json={"items": []})
         return httpx.Response(200, json={"items": [item]})
 
-    settings = _settings()
-    settings = settings.model_copy(update={"news_display": 1})
+    settings = _settings().model_copy(update={"news_display": 1})
     with httpx.Client(transport=httpx.MockTransport(handler)) as client:
         articles = fetch_news(client, settings)
 
-    assert starts == ["1", "2"]
+    assert starts == ["1", "2", "3"]
     assert [article.url for article in articles] == ["https://www.yna.co.kr/view/AKR1"]
+
+
+def test_news_search_stops_at_the_collected_time() -> None:
+    starts: list[str] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        starts.append(request.url.params["start"])
+        return httpx.Response(
+            200,
+            json={
+                "items": [
+                    {
+                        "title": "새 특별전",
+                        "description": "연합뉴스",
+                        "originallink": "https://www.yna.co.kr/view/NEW",
+                        "link": "https://n.news.naver.com/article/001/9",
+                        "pubDate": "Mon, 12 Oct 2026 09:00:00 +0900",
+                    },
+                    {
+                        "title": "이미 본 특별전",
+                        "description": "연합뉴스",
+                        "originallink": "https://www.yna.co.kr/view/OLD",
+                        "link": "https://n.news.naver.com/article/001/8",
+                        "pubDate": "Sun, 11 Oct 2026 09:00:00 +0900",
+                    },
+                ]
+            },
+        )
+
+    seen = datetime(2026, 10, 11, 12, 0, tzinfo=_KST)
+    with httpx.Client(transport=httpx.MockTransport(handler)) as client:
+        articles = fetch_news(client, _settings(), seen_through=seen)
+
+    assert starts == ["1"]
+    assert [article.url for article in articles] == ["https://www.yna.co.kr/view/NEW"]
+
+
+def test_news_search_keeps_older_articles_while_backfill_remains() -> None:
+    def handler(_request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            json={
+                "items": [
+                    _item("https://www.yna.co.kr/view/NEW", "Mon, 13 Oct 2026 09:00:00 +0900"),
+                    _item("https://www.yna.co.kr/view/MID", "Sun, 11 Oct 2026 09:00:00 +0900"),
+                    _item("https://www.yna.co.kr/view/OLD", "Fri, 09 Oct 2026 09:00:00 +0900"),
+                ]
+            },
+        )
+
+    with httpx.Client(transport=httpx.MockTransport(handler)) as client:
+        articles = fetch_news(
+            client,
+            _settings(),
+            seen_through=datetime(2026, 10, 12, 12, 0, tzinfo=_KST),
+            resume_before=datetime(2026, 10, 10, 0, 0, tzinfo=_KST),
+        )
+
+    assert [article.url for article in articles] == [
+        "https://www.yna.co.kr/view/NEW",
+        "https://www.yna.co.kr/view/OLD",
+    ]
+
+
+def _item(url: str, published: str) -> dict[str, str]:
+    return {
+        "title": "특별전",
+        "description": "연합뉴스",
+        "originallink": url,
+        "link": "https://n.news.naver.com/article/001/1",
+        "pubDate": published,
+    }

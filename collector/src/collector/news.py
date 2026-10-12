@@ -5,6 +5,8 @@ from __future__ import annotations
 import logging
 import re
 from dataclasses import dataclass
+from datetime import datetime
+from email.utils import parsedate_to_datetime
 from html import unescape
 from urllib.parse import urlparse
 
@@ -27,6 +29,7 @@ class NewsArticle:
     title: str
     description: str
     url: str
+    published_at: datetime | None = None
 
 
 def split_keywords(raw: str) -> list[str]:
@@ -44,7 +47,10 @@ def _search_page(
     keyword: str,
     start: int,
     size: int,
-) -> tuple[int, list[NewsArticle]]:
+    *,
+    seen_through: datetime | None,
+    resume_before: datetime | None,
+) -> tuple[int, list[NewsArticle], bool]:
     response = client.get(
         _NAVER_NEWS_URL,
         params={
@@ -63,33 +69,52 @@ def _search_page(
     payload = response.json()
     items = payload.get("items") if isinstance(payload, dict) else None
     if not isinstance(items, list):
-        return 0, []
+        return 0, [], False
     articles: list[NewsArticle] = []
+    reached_old = False
     for item in items:
         if not isinstance(item, dict):
+            continue
+        published = _published_at(item.get("pubDate"))
+        if _passed_cursor(published, seen_through, resume_before):
+            reached_old = True
+            break
+        if not _in_range(published, seen_through, resume_before):
             continue
         title = plain_text(str(item.get("title") or ""))
         description = plain_text(str(item.get("description") or ""))
         url = _yonhap_url(item)
         if title and url:
-            articles.append(NewsArticle(title=title, description=description, url=url))
-    return len(items), articles
+            articles.append(
+                NewsArticle(title=title, description=description, url=url, published_at=published)
+            )
+    return len(items), articles, reached_old
 
 
 def _search_keyword(
     client: httpx.Client,
     settings: Settings,
     keyword: str,
+    *,
+    seen_through: datetime | None,
+    resume_before: datetime | None,
 ) -> list[NewsArticle]:
-    """연합뉴스가 목표 건수가 될 때까지 다음 페이지를 읽는다."""
-    target = settings.news_display
+    """첫 수집은 1000건 창을 읽고, 이후에는 이미 처리한 시각에서 멈춘다."""
     found: list[NewsArticle] = []
     seen: set[str] = set()
     start = 1
-    while start <= _MAX_WINDOW and len(found) < target:
-        size = min(target, _MAX_WINDOW - start + 1)
+    while start <= _MAX_WINDOW:
+        size = min(settings.news_display, _MAX_WINDOW - start + 1)
         try:
-            raw_count, batch = _search_page(client, settings, keyword, start, size)
+            raw_count, batch, reached_old = _search_page(
+                client,
+                settings,
+                keyword,
+                start,
+                size,
+                seen_through=seen_through,
+                resume_before=resume_before,
+            )
         except httpx.HTTPStatusError as exc:
             logger.warning("네이버 뉴스 검색 실패: %s status=%s", keyword, exc.response.status_code)
             break
@@ -101,20 +126,31 @@ def _search_keyword(
                 continue
             seen.add(article.url)
             found.append(article)
-            if len(found) >= target:
-                break
-        if raw_count < size:
+        if reached_old or raw_count < size:
             break
         start += size
-    return found[:target]
+    return found
 
 
-def fetch_news(client: httpx.Client, settings: Settings) -> list[NewsArticle]:
+def fetch_news(
+    client: httpx.Client,
+    settings: Settings,
+    *,
+    seen_through: datetime | None = None,
+    resume_before: datetime | None = None,
+) -> list[NewsArticle]:
     """검색어마다 연합뉴스만 모으고, 같은 주소는 한 번만 남긴다."""
     found: list[NewsArticle] = []
     seen: set[str] = set()
     for keyword in split_keywords(settings.news_keywords):
-        for article in _search_keyword(client, settings, keyword):
+        batch = _search_keyword(
+            client,
+            settings,
+            keyword,
+            seen_through=seen_through,
+            resume_before=resume_before,
+        )
+        for article in batch:
             if article.url in seen:
                 continue
             seen.add(article.url)
@@ -144,3 +180,40 @@ def _is_yonhap(url: str) -> bool:
     if host == "yna.co.kr" or host.endswith(".yna.co.kr"):
         return True
     return _YONHAP_OFFICE in url
+
+
+def _published_at(value: object) -> datetime | None:
+    if not isinstance(value, str) or not value.strip():
+        return None
+    try:
+        parsed = parsedate_to_datetime(value)
+    except (TypeError, ValueError, IndexError, OverflowError):
+        return None
+    return parsed
+
+
+def _in_range(
+    published: datetime | None,
+    seen_through: datetime | None,
+    resume_before: datetime | None,
+) -> bool:
+    """저장된 시각이 없으면 창 안의 기사를 모두 받는다."""
+    if seen_through is None and resume_before is None:
+        return True
+    if published is None:
+        return resume_before is not None
+    if seen_through is not None and published > seen_through:
+        return True
+    # 경계 시각과 같은 기사는 다시 받는다. 같은 초에 처리하지 못한 기사가 빠지지 않게 한다.
+    return resume_before is not None and published <= resume_before
+
+
+def _passed_cursor(
+    published: datetime | None,
+    seen_through: datetime | None,
+    resume_before: datetime | None,
+) -> bool:
+    """이어 받는 중이 아니면, 이미 처리한 시각 이하에서 검색을 멈춘다."""
+    if resume_before is not None or seen_through is None or published is None:
+        return False
+    return published <= seen_through

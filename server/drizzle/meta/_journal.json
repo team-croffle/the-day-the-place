@@ -22,6 +22,13 @@
       "when": 1791372787184,
       "tag": "0002_exhibition_optional_start",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1791798996213,
+      "tag": "0003_news_collect_cursors",
+      "breakpoints": true
     }
   ]
 }

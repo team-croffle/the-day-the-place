@@ -9,7 +9,7 @@
 
 Modal 의 기본 타임존은 UTC 다. KST 로 생각한다면 `timezone` 을 반드시 명시할 것::
 
-    SCHEDULE = modal.Cron("0 4 * * *", timezone="Asia/Seoul")  # 매일 KST 04:00
+    SCHEDULE = modal.Cron("0 3 * * *", timezone="Asia/Seoul")  # 매일 KST 03:00
 
 `modal.Period` 는 재배포할 때마다 타이머가 리셋되므로 일 단위 배치에는 `Cron` 을 쓴다.
 """
@@ -29,8 +29,8 @@ APP_NAME = "geunal-collector"
 #   modal secret create geunal-collector DATABASE_URL=... GEMINI_API_KEY=... ...
 SECRET_NAME = "geunal-collector"
 
-# TODO: 수집 주기를 정한 뒤 채운다 (모듈 docstring 참고).
-SCHEDULE: Schedule | None = None
+# 배포(`modal deploy`)할 때 이 크론이 함께 등록된다. 코드만 바꾼 상태에서는 돌지 않는다.
+SCHEDULE: Schedule = modal.Cron("0 3 * * *", timezone="Asia/Seoul")
 
 # uv_sync 는 pyproject.toml + uv.lock 만 빌드 컨텍스트에 넣고 `uv sync --frozen` 을 돌린다.
 # 프로젝트 자체는 설치하지 않으므로 소스는 add_local_python_source 로 따로 넣는다.
