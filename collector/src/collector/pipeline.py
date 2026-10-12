@@ -8,8 +8,9 @@ from __future__ import annotations
 import logging
 import time
 from collections.abc import Callable, Sequence
-from dataclasses import replace
+from dataclasses import dataclass, replace
 from datetime import date, datetime
+from enum import Enum
 from zoneinfo import ZoneInfo
 
 import httpx
@@ -37,6 +38,20 @@ _GEMINI_BUDGET_SECONDS = 600.0
 _SELECT_BATCH = 20
 
 
+class _PageStop(Enum):
+    """BUDGET은 다음 실행에 남긴다. CLOSED는 이번 목록 맨 뒤에서 한 번 더 연다."""
+
+    BUDGET = "budget"
+    CLOSED = "closed"
+
+
+@dataclass(frozen=True)
+class _Read:
+    stop: _PageStop | None
+    calls: int = 0
+    waits: int = 0
+
+
 def seoul_today() -> date:
     return datetime.now(_SEOUL).date()
 
@@ -58,6 +73,7 @@ def build_drafts(
     """제목 묶음으로 기사를 고르고, 고른 기사만 열어 전시를 뽑는다.
 
     분당 한도에 걸리면 그 호출은 버리지 않고 기다렸다가 다시 부른다.
+    기사 페이지가 안 열리면 목록 맨 뒤로 보내 한 번 더 연다. 그래도 안 열리면 그 기사만 버린다.
     대기까지 포함해 budget_seconds 를 넘기면 남은 기사는 다음 실행으로 남긴다.
     """
     drafts: list[ExhibitionDraft] = []
@@ -65,6 +81,7 @@ def build_drafts(
     waits = 0
     deadline = monotonic() + budget_seconds
     stopped = False
+    deferred: list[NewsArticle] = []
     for batch in _batches(articles, batch_size):
 
         def select_current(
@@ -93,51 +110,44 @@ def build_drafts(
                 _remember(done, article)
         for article_id in filter_selected_ids(chosen, allowed):
             article = by_id[article_id]
-            page = _page_within_budget(
+            read = _read_chosen(
                 article,
+                drafts=drafts,
+                done=done,
                 fetch_page=fetch_page,
-                monotonic=monotonic,
-                deadline=deadline,
-            )
-            if page is None:
-                stopped = True
-                break
-            image_url, body = page
-            if not body.strip():
-                _remember(done, article)
-                continue
-
-            def extract_current(
-                current: NewsArticle = article,
-                text: str = body,
-            ) -> list[ExtractedExhibition]:
-                return extract_body(current, text)
-
-            extracted = _call_within_budget(
-                extract_current,
+                extract_body=extract_body,
+                match_place_name=match_place_name,
+                today=today,
                 sleep=sleep,
                 monotonic=monotonic,
                 deadline=deadline,
-                label=article.url,
             )
-            if extracted is None:
+            calls += read.calls
+            waits += read.waits
+            if read.stop is _PageStop.BUDGET:
                 stopped = True
                 break
-            raws, body_waits = extracted
-            calls += 1
-            waits += body_waits
-            _remember(done, article)
-            drafts.extend(
-                _drafts_from_article(
-                    article,
-                    raws,
-                    image_url=image_url,
-                    match_place_name=match_place_name,
-                    today=today,
-                )
-            )
+            if read.stop is _PageStop.CLOSED:
+                logger.info("기사 페이지를 목록 맨 뒤로 보낸다: %s", article.url)
+                deferred.append(article)
         if stopped:
             break
+    if not stopped:
+        again = _reread_deferred(
+            deferred,
+            drafts=drafts,
+            done=done,
+            fetch_page=fetch_page,
+            extract_body=extract_body,
+            match_place_name=match_place_name,
+            today=today,
+            sleep=sleep,
+            monotonic=monotonic,
+            deadline=deadline,
+        )
+        stopped = again.stop is _PageStop.BUDGET
+        calls += again.calls
+        waits += again.waits
     if stopped:
         logger.info("남은 기사는 다음 실행으로 남긴다")
     logger.info("gemini_calls=%s drafts=%s rate_limit_waits=%s", calls, len(drafts), waits)
@@ -160,21 +170,93 @@ def _batches(
     return batches
 
 
-def _page_within_budget(
-    article: NewsArticle,
+def _reread_deferred(
+    deferred: Sequence[NewsArticle],
     *,
+    drafts: list[ExhibitionDraft],
+    done: set[str] | None,
     fetch_page: Callable[[str], tuple[str | None, str] | None],
+    extract_body: Callable[[NewsArticle, str], list[ExtractedExhibition]],
+    match_place_name: Callable[[str], tuple[str, str] | None],
+    today: date,
+    sleep: Callable[[float], None],
     monotonic: Callable[[], float],
     deadline: float,
-) -> tuple[str | None, str] | None:
-    """시간 한도이거나 페이지를 못 열면 None. 그 기사는 완료로 치지 않는다."""
+) -> _Read:
+    """맨 뒤로 보낸 기사를 한 번 더 연다. 그래도 안 열리면 그 기사만 버린다."""
+    calls = 0
+    waits = 0
+    for article in deferred:
+        read = _read_chosen(
+            article,
+            drafts=drafts,
+            done=done,
+            fetch_page=fetch_page,
+            extract_body=extract_body,
+            match_place_name=match_place_name,
+            today=today,
+            sleep=sleep,
+            monotonic=monotonic,
+            deadline=deadline,
+        )
+        calls += read.calls
+        waits += read.waits
+        if read.stop is _PageStop.BUDGET:
+            return _Read(_PageStop.BUDGET, calls, waits)
+        if read.stop is _PageStop.CLOSED:
+            logger.info("기사 페이지를 두 번 열지 못해 버린다: %s", article.url)
+            _remember(done, article)
+    return _Read(None, calls, waits)
+
+
+def _read_chosen(
+    article: NewsArticle,
+    *,
+    drafts: list[ExhibitionDraft],
+    done: set[str] | None,
+    fetch_page: Callable[[str], tuple[str | None, str] | None],
+    extract_body: Callable[[NewsArticle, str], list[ExtractedExhibition]],
+    match_place_name: Callable[[str], tuple[str, str] | None],
+    today: date,
+    sleep: Callable[[float], None],
+    monotonic: Callable[[], float],
+    deadline: float,
+) -> _Read:
+    """기사를 연다. 시간 한도면 BUDGET, 페이지가 안 열리면 CLOSED."""
     if monotonic() >= deadline:
-        return None
+        return _Read(_PageStop.BUDGET)
     opened = fetch_page(article.url)
     if opened is None:
-        logger.info("기사 페이지를 열지 못해 다음 실행으로 남긴다: %s", article.url)
-        return None
-    return opened
+        return _Read(_PageStop.CLOSED)
+    image_url, body = opened
+    if not body.strip():
+        _remember(done, article)
+        return _Read(None)
+
+    def extract_current() -> list[ExtractedExhibition]:
+        return extract_body(article, body)
+
+    extracted = _call_within_budget(
+        extract_current,
+        sleep=sleep,
+        monotonic=monotonic,
+        deadline=deadline,
+        label=article.url,
+    )
+    if extracted is None:
+        return _Read(_PageStop.BUDGET)
+    raws, body_waits = extracted
+    _remember(done, article)
+    drafts.extend(
+        _drafts_from_article(
+            article,
+            raws,
+            image_url=image_url,
+            match_place_name=match_place_name,
+            today=today,
+        )
+    )
+    return _Read(None, calls=1, waits=body_waits)
 
 
 def _drafts_from_article(
