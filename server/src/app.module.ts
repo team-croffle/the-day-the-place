@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 
+import { CollectorModule } from './collector/collector.module';
 import { DatabaseModule } from './database/database.module';
 import { ExhibitionsModule } from './exhibitions/exhibitions.module';
 import { HealthModule } from './health/health.module';
@@ -19,6 +20,7 @@ import { UsersModule } from './users/users.module';
     HealthModule,
     PlacesModule,
     ExhibitionsModule,
+    CollectorModule,
     UsersModule,
   ],
 })

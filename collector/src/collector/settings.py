@@ -24,7 +24,18 @@ class Settings(BaseSettings):
     )
 
     # --- 저장소 -------------------------------------------------------------
-    database_url: str = Field(description="postgresql://user:pass@host:5432/db")
+    # 수집기는 DB에 직접 붙지 않는다. 예전 환경 변수는 무시한다.
+    database_url: str = Field(default="", description="쓰지 않는다. 저장은 서버 API가 한다")
+
+    # --- 결과 전송 ----------------------------------------------------------
+    collector_api_base_url: str = Field(
+        default="",
+        description="수집 결과를 받을 서버 주소. 경로 없이 https://호스트",
+    )
+    collector_ingest_secret: str = Field(
+        default="",
+        description="서버 COLLECTOR_INGEST_SECRET 과 같은 값",
+    )
 
     # --- 원천 API -----------------------------------------------------------
     naver_client_id: str = Field(description="네이버 뉴스 검색 API client id")

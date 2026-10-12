@@ -23,17 +23,18 @@ pnpm docker:dev
 
 `server/.env` 를 직접 만들고 아래 값을 채운다. 예시 파일은 없다.
 
-| 변수                    | 필수 | 기본값                                        | 설명                                  |
-| ----------------------- | ---- | --------------------------------------------- | ------------------------------------- |
-| `DATABASE_URL`          | O    | -                                             | `postgresql://user:pass@host:5432/db` |
-| `PORT`                  | X    | `3000`                                        | HTTP 포트                             |
-| `CORS_ORIGIN`           | X    | `*`                                           | 허용 오리진                           |
-| `DATABASE_POOL_MAX`     | X    | `10`                                          | pg 커넥션 풀 최대 크기                |
-| `NODE_ENV`              | X    | -                                             | `development` / `production`          |
-| `TOUR_API_KEY`          | O    | -                                             | 한국관광공사 TourAPI (v0.1)           |
-| `TOUR_API_BASE_URL`     | X    | `https://apis.data.go.kr/B551011/KorService2` | TourAPI 베이스 URL                    |
-| `HERITAGE_API_BASE_URL` | X    | -                                             | 국가유산청 API 베이스 (v0.2 상세)     |
-| `HERITAGE_API_KEY`      | X    | -                                             | 국가유산청이 키를 요구하면 추가       |
+| 변수                      | 필수 | 기본값                                        | 설명                                  |
+| ------------------------- | ---- | --------------------------------------------- | ------------------------------------- |
+| `DATABASE_URL`            | O    | -                                             | `postgresql://user:pass@host:5432/db` |
+| `PORT`                    | X    | `3000`                                        | HTTP 포트                             |
+| `CORS_ORIGIN`             | X    | `*`                                           | 허용 오리진                           |
+| `DATABASE_POOL_MAX`       | X    | `10`                                          | pg 커넥션 풀 최대 크기                |
+| `NODE_ENV`                | X    | -                                             | `development` / `production`          |
+| `TOUR_API_KEY`            | O    | -                                             | 한국관광공사 TourAPI (v0.1)           |
+| `TOUR_API_BASE_URL`       | X    | `https://apis.data.go.kr/B551011/KorService2` | TourAPI 베이스 URL                    |
+| `HERITAGE_API_BASE_URL`   | X    | -                                             | 국가유산청 API 베이스 (v0.2 상세)     |
+| `HERITAGE_API_KEY`        | X    | -                                             | 국가유산청이 키를 요구하면 추가       |
+| `COLLECTOR_INGEST_SECRET` | 수집 | -                                             | 수집 API 비밀. 비어 있으면 거절한다   |
 
 예시:
 
@@ -87,3 +88,7 @@ pnpm --filter @nest-vue/server test:e2e   # e2e (test/**/*.e2e-spec.ts)
 | POST   | `/api/users`                                  | 생성                                         |
 | PATCH  | `/api/users/:id`                              | 수정                                         |
 | DELETE | `/api/users/:id`                              | 삭제                                         |
+| GET    | `/api/exhibitions`                            | 전시 목록. 저장분과 전시정보(통합)을 합친다  |
+| GET    | `/api/exhibitions/:id`                        | 전시 한 건                                   |
+| GET    | `/api/collector/cursor`                       | 마지막 수집 시각. 비밀 헤더 필요             |
+| POST   | `/api/collector/ingest`                       | 전시 JSON 저장과 종료분 삭제. 비밀 헤더 필요 |

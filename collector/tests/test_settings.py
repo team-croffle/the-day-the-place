@@ -25,10 +25,12 @@ def test_settings_load_from_env(monkeypatch: pytest.MonkeyPatch) -> None:
     assert settings.culture_api_key == ""
 
 
-def test_settings_require_database_url(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_settings_allow_a_missing_database_url(monkeypatch: pytest.MonkeyPatch) -> None:
     for key, value in REQUIRED.items():
         monkeypatch.setenv(key, value)
-    monkeypatch.delenv("DATABASE_URL")
+    monkeypatch.delenv("DATABASE_URL", raising=False)
 
-    with pytest.raises(ValueError, match="database_url"):
-        Settings(_env_file=None)  # type: ignore[call-arg]
+    settings = Settings(_env_file=None)  # type: ignore[call-arg]
+
+    assert settings.database_url == ""
+    assert settings.collector_api_base_url == ""
