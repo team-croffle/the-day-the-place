@@ -139,7 +139,7 @@ def build_drafts(
         if stopped:
             break
     if stopped:
-        logger.info("Gemini 시간 한도, 남은 기사는 다음 실행으로 남긴다")
+        logger.info("남은 기사는 다음 실행으로 남긴다")
     logger.info("gemini_calls=%s drafts=%s rate_limit_waits=%s", calls, len(drafts), waits)
     return drafts
 
@@ -167,12 +167,13 @@ def _page_within_budget(
     monotonic: Callable[[], float],
     deadline: float,
 ) -> tuple[str | None, str] | None:
-    """시간 한도면 None. 페이지를 못 열면 빈 본문이라 그 기사만 건너뛴다."""
+    """시간 한도이거나 페이지를 못 열면 None. 그 기사는 완료로 치지 않는다."""
     if monotonic() >= deadline:
         return None
     opened = fetch_page(article.url)
     if opened is None:
-        return None, ""
+        logger.info("기사 페이지를 열지 못해 다음 실행으로 남긴다: %s", article.url)
+        return None
     return opened
 
 

@@ -29,6 +29,24 @@ describe('selectExhibitions', () => {
     expect(kept.map((item) => item.id)).toEqual(['1']);
   });
 
+  it('uses the start date for upcoming and ongoing', () => {
+    const started = row({ status: 'upcoming', startsOn: '2026-10-01' });
+    const later = row({
+      id: '2',
+      title: '황룡사',
+      status: 'ongoing',
+      startsOn: '2026-11-01',
+      placeName: '국립경주박물관',
+    });
+
+    expect(
+      selectExhibitions([started], { status: 'ongoing' }, TODAY).map((item) => item.id),
+    ).toEqual(['1']);
+    expect(
+      selectExhibitions([later], { status: 'upcoming' }, TODAY).map((item) => item.status),
+    ).toEqual(['upcoming']);
+  });
+
   it('filters by status, text, region, and place', () => {
     const rows = [
       row(),
