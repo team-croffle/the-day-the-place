@@ -25,8 +25,7 @@ from collector.settings import get_settings
 
 APP_NAME = "geunal-collector"
 
-# 시크릿은 미리 만들어 둔다.
-#   modal secret create geunal-collector DATABASE_URL=... GEMINI_API_KEY=... ...
+# 시크릿 예: NAVER_CLIENT_ID, GEMINI_API_KEY, COLLECTOR_API_BASE_URL, COLLECTOR_INGEST_SECRET.
 SECRET_NAME = "geunal-collector"
 
 # 배포(`modal deploy`)할 때 이 크론이 함께 등록된다. 코드만 바꾼 상태에서는 돌지 않는다.

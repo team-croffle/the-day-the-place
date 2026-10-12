@@ -26,8 +26,9 @@ from collector.extract import (
 from collector.news import NewsArticle, fetch_news
 from collector.places import match_place
 from collector.poster import fetch_article_page
+from collector.publish import fetch_news_cursor, publish_exhibitions, require_publish_target
 from collector.settings import Settings
-from collector.store import load_news_cursor, next_news_cursor, save_exhibitions, save_news_cursor
+from collector.store import next_news_cursor
 
 logger = logging.getLogger(__name__)
 
@@ -227,12 +228,13 @@ def run(settings: Settings) -> None:
     """하루치 특별전 수집을 1회 수행한다."""
     today = seoul_today()
     logger.info("collector start (dry_run=%s today=%s)", settings.dry_run, today.isoformat())
-
-    cursor = None if settings.dry_run else load_news_cursor(settings.database_url)
-    seen_through = None if cursor is None else cursor.seen_through
-    resume_before = None if cursor is None else cursor.resume_before
+    if not settings.dry_run:
+        require_publish_target(settings)
 
     with httpx.Client(timeout=20.0) as client:
+        cursor = None if settings.dry_run else fetch_news_cursor(client, settings)
+        seen_through = None if cursor is None else cursor.seen_through
+        resume_before = None if cursor is None else cursor.resume_before
         articles = _newest_first(
             fetch_news(
                 client,
@@ -251,24 +253,21 @@ def run(settings: Settings) -> None:
             today=today,
             done=done,
         )
+        if settings.dry_run:
+            for draft in drafts:
+                logger.info(
+                    "dry-run %s | %s | %s~%s | %s",
+                    draft.status,
+                    draft.title,
+                    draft.starts_on.isoformat() if draft.starts_on else "",
+                    draft.ends_on.isoformat(),
+                    draft.place_name,
+                )
+            logger.info("collector done (dry-run, drafts=%s)", len(drafts))
+            return
 
-    if settings.dry_run:
-        for draft in drafts:
-            logger.info(
-                "dry-run %s | %s | %s~%s | %s",
-                draft.status,
-                draft.title,
-                draft.starts_on.isoformat() if draft.starts_on else "",
-                draft.ends_on.isoformat(),
-                draft.place_name,
-            )
-        logger.info("collector done (dry-run, drafts=%s)", len(drafts))
-        return
-
-    deleted = save_exhibitions(settings.database_url, drafts, today)
-    advanced = next_news_cursor(cursor, articles, done)
-    if advanced is not None:
-        save_news_cursor(settings.database_url, advanced)
+        advanced = next_news_cursor(cursor, articles, done)
+        deleted = publish_exhibitions(client, settings, drafts, advanced)
     logger.info("collector done (drafts=%s deleted_ended=%s)", len(drafts), deleted)
 
 

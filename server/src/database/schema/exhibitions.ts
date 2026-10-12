@@ -13,7 +13,7 @@ import {
 
 export const exhibitionStatusEnum = pgEnum('exhibition_status', EXHIBITION_STATUSES);
 
-/** 특별전 한 건. 수집기가 쓰고, 종료일 다음 날 지운다. */
+/** 특별전 한 건. 수집 결과가 서버를 통해 들어오고, 종료일 다음 날 지운다. */
 export const exhibitions = pgTable(
   'exhibitions',
   {
