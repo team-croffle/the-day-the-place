@@ -192,7 +192,7 @@ def test_rate_limit_stops_when_the_wait_exceeds_the_budget() -> None:
     assert drafts == []
 
 
-def test_unopened_page_stays_for_the_next_run() -> None:
+def test_closed_page_is_retried_after_the_rest_then_dropped() -> None:
     done: set[str] = set()
     opened: list[str] = []
 
@@ -209,6 +209,68 @@ def test_unopened_page_stays_for_the_next_run() -> None:
         extract_body=_one,
         match_place_name=lambda _name: None,
         today=TODAY,
+        done=done,
+    )
+
+    assert opened == [
+        "https://example.test/fail",
+        "https://example.test/later",
+        "https://example.test/fail",
+    ]
+    assert done == {"https://example.test/fail", "https://example.test/later"}
+    assert [draft.source_url for draft in drafts] == ["https://example.test/later"]
+
+
+def test_closed_page_opens_on_the_second_try() -> None:
+    done: set[str] = set()
+    opened: list[str] = []
+
+    def fetch_page(url: str) -> tuple[str | None, str] | None:
+        opened.append(url)
+        if url.endswith("/fail") and opened.count(url) == 1:
+            return None
+        return _page(url)
+
+    drafts = build_drafts(
+        [_article("https://example.test/fail"), _article("https://example.test/later")],
+        select_ids=_select_all,
+        fetch_page=fetch_page,
+        extract_body=_one,
+        match_place_name=lambda _name: None,
+        today=TODAY,
+        done=done,
+    )
+
+    assert opened == [
+        "https://example.test/fail",
+        "https://example.test/later",
+        "https://example.test/fail",
+    ]
+    assert done == {"https://example.test/fail", "https://example.test/later"}
+    assert [draft.source_url for draft in drafts] == [
+        "https://example.test/later",
+        "https://example.test/fail",
+    ]
+
+
+def test_time_limit_does_not_drop_a_closed_page() -> None:
+    done: set[str] = set()
+    opened: list[str] = []
+    clock = {"n": 0}
+
+    def monotonic() -> float:
+        clock["n"] += 1
+        return 0.0 if clock["n"] < 4 else 1000.0
+
+    drafts = build_drafts(
+        [_article("https://example.test/fail"), _article("https://example.test/later")],
+        select_ids=_select_all,
+        fetch_page=lambda url: opened.append(url) or None,
+        extract_body=_one,
+        match_place_name=lambda _name: None,
+        today=TODAY,
+        monotonic=monotonic,
+        budget_seconds=10,
         done=done,
     )
 
