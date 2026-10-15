@@ -48,7 +48,7 @@ function withStatusOn(row: Exhibition, today: string): Exhibition {
 function collapseExhibitions(rows: readonly Exhibition[]): Exhibition[] {
   const groups = new Map<string, Exhibition[]>();
   for (const row of rows) {
-    const key = `${fold(row.placeName)}|${row.endsOn}`;
+    const key = fold(row.placeName);
     const list = groups.get(key) ?? [];
     list.push(row);
     groups.set(key, list);
@@ -87,6 +87,19 @@ function clusterTitles(list: readonly Exhibition[]): Exhibition[] {
     kept.set(root, current ? preferExhibition(current, row) : row);
   });
   return [...kept.values()];
+}
+
+/** 기관명과 제목이 같으면 같은 전시다. 종료일은 보지 않는다. */
+export function sameExhibitionName(
+  placeName: string,
+  title: string,
+  otherPlaceName: string,
+  otherTitle: string,
+): boolean {
+  if (fold(placeName) !== fold(otherPlaceName)) {
+    return false;
+  }
+  return titlesMatch(fold(title), fold(otherTitle));
 }
 
 function titlesMatch(left: string, right: string): boolean {

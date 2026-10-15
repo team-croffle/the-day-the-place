@@ -2,9 +2,9 @@ from __future__ import annotations
 
 from datetime import date
 
-from collector.extract import ExtractedExhibition, RateLimitedError
+from collector.extract import ExhibitionDraft, ExtractedExhibition, RateLimitedError
 from collector.news import NewsArticle, plain_text, split_keywords
-from collector.pipeline import build_drafts
+from collector.pipeline import build_drafts, take_publish_batch
 from collector.places import choose_tour_place
 
 TODAY = date(2026, 10, 7)
@@ -334,6 +334,109 @@ def test_place_is_attached_only_after_a_draft() -> None:
     assert opened == ["https://example.test/skip", "https://example.test/keep"]
     assert drafts[0].image_url == "https://cdn.example.test/poster.jpg"
     assert drafts[0].source_url == "https://example.test/keep"
+
+
+def _draft(
+    url: str,
+    title: str,
+    *,
+    summary: str = "요약을 남긴다.",
+    place_name: str = "국립중앙박물관",
+    starts_on: date | None = date(2026, 10, 1),
+    ends_on: date = date(2026, 12, 31),
+) -> ExhibitionDraft:
+    return ExhibitionDraft(
+        title=title,
+        starts_on=starts_on,
+        ends_on=ends_on,
+        status="ongoing",
+        place_name=place_name,
+        summary=summary,
+        source_url=url,
+    )
+
+
+def test_publish_batch_stops_at_a_hole_and_flushes_the_rest() -> None:
+    articles = [_article(f"https://example.test/{name}") for name in ("a", "b", "c", "d")]
+    by_url = {
+        articles[0].url: [_draft(articles[0].url, "하나"), _draft(articles[0].url, "둘")],
+        articles[1].url: [_draft(articles[1].url, "셋")],
+        articles[3].url: [_draft(articles[3].url, "넷")],
+    }
+    done = {articles[0].url, articles[1].url, articles[3].url}
+
+    first = take_publish_batch(articles, done, by_url, set(), force=False, size=2)
+    assert first is not None
+    drafts, urls = first
+    assert urls == [articles[0].url]
+    assert [draft.title for draft in drafts] == ["하나", "둘"]
+
+    held = take_publish_batch(articles, done, by_url, {articles[0].url}, force=False, size=2)
+    assert held is None
+
+    flushed = take_publish_batch(articles, done, by_url, {articles[0].url}, force=True, size=2)
+    assert flushed is not None
+    drafts, urls = flushed
+    assert urls == [articles[1].url]
+    assert [draft.title for draft in drafts] == ["셋"]
+
+
+def test_publish_batch_keeps_one_copy_of_the_same_exhibition() -> None:
+    articles = [_article(f"https://example.test/{name}") for name in ("new", "old")]
+    by_url = {
+        articles[0].url: [_draft(articles[0].url, "조선의 색", summary="짧다.")],
+        articles[1].url: [
+            _draft(
+                articles[1].url,
+                "조선의색",
+                summary="더 긴 요약을 남긴다.",
+                place_name="국립 중앙 박물관",
+            )
+        ],
+    }
+    done = {article.url for article in articles}
+
+    batch = take_publish_batch(articles, done, by_url, set(), force=True, size=2)
+    assert batch is not None
+    drafts, urls = batch
+    assert urls == [article.url for article in articles]
+    assert [draft.summary for draft in drafts] == ["더 긴 요약을 남긴다."]
+
+
+def test_publish_batch_treats_different_end_dates_as_one_show() -> None:
+    articles = [_article(f"https://example.test/{name}") for name in ("new", "old")]
+    by_url = {
+        articles[0].url: [_draft(articles[0].url, "조선의 색", ends_on=date(2026, 12, 31))],
+        articles[1].url: [_draft(articles[1].url, "조선의색", ends_on=date(2027, 3, 1))],
+    }
+    done = {article.url for article in articles}
+
+    batch = take_publish_batch(articles, done, by_url, set(), force=True, size=2)
+    assert batch is not None
+    drafts, urls = batch
+    assert urls == [article.url for article in articles]
+    assert [draft.ends_on for draft in drafts] == [date(2026, 12, 31)]
+
+
+def test_publish_batch_drops_an_exhibition_already_sent() -> None:
+    articles = [_article(f"https://example.test/{name}") for name in ("new", "old")]
+    sent_draft = _draft(articles[0].url, "조선의 색")
+    by_url = {articles[1].url: [_draft(articles[1].url, "조선의색")]}
+    done = {article.url for article in articles}
+
+    batch = take_publish_batch(
+        articles,
+        done,
+        by_url,
+        {articles[0].url},
+        sent_drafts=[sent_draft],
+        force=True,
+        size=2,
+    )
+    assert batch is not None
+    drafts, urls = batch
+    assert urls == [articles[1].url]
+    assert drafts == []
 
 
 def test_choose_tour_place_skips_other_content_types() -> None:

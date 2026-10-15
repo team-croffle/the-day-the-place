@@ -1,9 +1,10 @@
+import { sameExhibitionName } from '@nest-vue/shared';
 import { Inject, Injectable } from '@nestjs/common';
-import { eq, sql } from 'drizzle-orm';
+import { eq, inArray, sql } from 'drizzle-orm';
 
 import { DRIZZLE } from '../database/database.constants';
 import type { DrizzleDb } from '../database/database.module';
-import { newsCollectCursors } from '../database/schema';
+import { exhibitions, newsCollectCursors } from '../database/schema';
 import type { IngestDraftDto, IngestExhibitionsDto } from './dto/ingest-exhibitions.dto';
 
 const CURSOR_SOURCE = 'yonhap';
@@ -11,6 +12,7 @@ const CURSOR_SOURCE = 'yonhap';
 export interface CollectorCursor {
   seenThrough: string;
   resumeBefore: string | null;
+  unseenFrom: string | null;
 }
 
 @Injectable()
@@ -29,6 +31,7 @@ export class CollectorService {
     return {
       seenThrough: row.seenThrough.toISOString(),
       resumeBefore: row.resumeBefore ? row.resumeBefore.toISOString() : null,
+      unseenFrom: row.unseenFrom ? row.unseenFrom.toISOString() : null,
     };
   }
 
@@ -38,7 +41,28 @@ export class CollectorService {
     const collectedAt = new Date();
     return this.db.transaction(async (tx) => {
       for (const draft of body.drafts) {
-        // 같은 연결의 트랜잭션이라 한 건씩 넣는다.
+        // 같은 연결의 트랜잭션이라 한 건씩 넣는다. 바로 앞에서 넣은 행도 비교에 들어간다.
+        // eslint-disable-next-line no-await-in-loop
+        const stored = await tx
+          .select({
+            id: exhibitions.id,
+            title: exhibitions.title,
+            placeName: exhibitions.placeName,
+          })
+          .from(exhibitions);
+        const matched = stored
+          .filter((row) =>
+            sameExhibitionName(row.placeName, row.title, draft.placeName, draft.title),
+          )
+          .map((row) => row.id);
+        if (matched.length > 0) {
+          // eslint-disable-next-line no-await-in-loop
+          await tx
+            .update(exhibitions)
+            .set(refreshPatch(draft, collectedAt))
+            .where(inArray(exhibitions.id, matched));
+          continue;
+        }
         // eslint-disable-next-line no-await-in-loop
         await tx.execute(upsertSql(draft, collectedAt));
       }
@@ -50,18 +74,34 @@ export class CollectorService {
             source: CURSOR_SOURCE,
             seenThrough: new Date(body.cursor.seenThrough),
             resumeBefore: body.cursor.resumeBefore ? new Date(body.cursor.resumeBefore) : null,
+            unseenFrom: body.cursor.unseenFrom ? new Date(body.cursor.unseenFrom) : null,
           })
           .onConflictDoUpdate({
             target: newsCollectCursors.source,
             set: {
               seenThrough: new Date(body.cursor.seenThrough),
               resumeBefore: body.cursor.resumeBefore ? new Date(body.cursor.resumeBefore) : null,
+              unseenFrom: body.cursor.unseenFrom ? new Date(body.cursor.unseenFrom) : null,
             },
           });
       }
       return rowCount(removed);
     });
   }
+}
+
+function refreshPatch(draft: IngestDraftDto, collectedAt: Date) {
+  return {
+    endsOn: draft.endsOn,
+    status: draft.status,
+    summary: draft.summary,
+    sourceUrl: draft.sourceUrl ?? null,
+    collectedAt,
+    ...(draft.startsOn ? { startsOn: draft.startsOn } : {}),
+    ...(draft.placeSource ? { placeSource: draft.placeSource } : {}),
+    ...(draft.placeId ? { placeId: draft.placeId } : {}),
+    ...(draft.imageUrl ? { imageUrl: draft.imageUrl } : {}),
+  };
 }
 
 function upsertSql(draft: IngestDraftDto, collectedAt: Date) {

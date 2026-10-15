@@ -65,3 +65,4 @@ def test_fetch_cursor_reads_the_saved_time() -> None:
     assert cursor is not None
     assert cursor.seen_through == datetime(2026, 10, 12, 0, 0, tzinfo=UTC)
     assert cursor.resume_before is None
+    assert cursor.unseen_from is None

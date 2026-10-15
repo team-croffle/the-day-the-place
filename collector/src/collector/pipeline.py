@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import logging
 import time
+import unicodedata
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, replace
 from datetime import date, datetime
@@ -36,6 +37,8 @@ logger = logging.getLogger(__name__)
 _SEOUL = ZoneInfo("Asia/Seoul")
 _GEMINI_BUDGET_SECONDS = 600.0
 _SELECT_BATCH = 20
+_PUBLISH_BATCH = 40
+_TITLE_OVERLAP = 8
 
 
 class _PageStop(Enum):
@@ -69,6 +72,7 @@ def build_drafts(
     budget_seconds: float = _GEMINI_BUDGET_SECONDS,
     batch_size: int = _SELECT_BATCH,
     done: set[str] | None = None,
+    on_article: Callable[[NewsArticle, list[ExhibitionDraft]], None] | None = None,
 ) -> list[ExhibitionDraft]:
     """제목 묶음으로 기사를 고르고, 고른 기사만 열어 전시를 뽑는다.
 
@@ -107,7 +111,7 @@ def build_drafts(
         chosen_ids = set(filter_selected_ids(chosen, allowed))
         for article_id, article in batch:
             if article_id not in chosen_ids:
-                _remember(done, article)
+                _finish(done, article, [], drafts, on_article)
         for article_id in filter_selected_ids(chosen, allowed):
             article = by_id[article_id]
             read = _read_chosen(
@@ -121,6 +125,7 @@ def build_drafts(
                 sleep=sleep,
                 monotonic=monotonic,
                 deadline=deadline,
+                on_article=on_article,
             )
             calls += read.calls
             waits += read.waits
@@ -144,6 +149,7 @@ def build_drafts(
             sleep=sleep,
             monotonic=monotonic,
             deadline=deadline,
+            on_article=on_article,
         )
         stopped = again.stop is _PageStop.BUDGET
         calls += again.calls
@@ -157,6 +163,19 @@ def build_drafts(
 def _remember(done: set[str] | None, article: NewsArticle) -> None:
     if done is not None:
         done.add(article.url)
+
+
+def _finish(
+    done: set[str] | None,
+    article: NewsArticle,
+    produced: list[ExhibitionDraft],
+    drafts: list[ExhibitionDraft],
+    on_article: Callable[[NewsArticle, list[ExhibitionDraft]], None] | None,
+) -> None:
+    _remember(done, article)
+    drafts.extend(produced)
+    if on_article is not None:
+        on_article(article, produced)
 
 
 def _batches(
@@ -182,6 +201,7 @@ def _reread_deferred(
     sleep: Callable[[float], None],
     monotonic: Callable[[], float],
     deadline: float,
+    on_article: Callable[[NewsArticle, list[ExhibitionDraft]], None] | None,
 ) -> _Read:
     """맨 뒤로 보낸 기사를 한 번 더 연다. 그래도 안 열리면 그 기사만 버린다."""
     calls = 0
@@ -198,6 +218,7 @@ def _reread_deferred(
             sleep=sleep,
             monotonic=monotonic,
             deadline=deadline,
+            on_article=on_article,
         )
         calls += read.calls
         waits += read.waits
@@ -205,7 +226,7 @@ def _reread_deferred(
             return _Read(_PageStop.BUDGET, calls, waits)
         if read.stop is _PageStop.CLOSED:
             logger.info("기사 페이지를 두 번 열지 못해 버린다: %s", article.url)
-            _remember(done, article)
+            _finish(done, article, [], drafts, on_article)
     return _Read(None, calls, waits)
 
 
@@ -221,6 +242,7 @@ def _read_chosen(
     sleep: Callable[[float], None],
     monotonic: Callable[[], float],
     deadline: float,
+    on_article: Callable[[NewsArticle, list[ExhibitionDraft]], None] | None,
 ) -> _Read:
     """기사를 연다. 시간 한도면 BUDGET, 페이지가 안 열리면 CLOSED."""
     if monotonic() >= deadline:
@@ -230,7 +252,7 @@ def _read_chosen(
         return _Read(_PageStop.CLOSED)
     image_url, body = opened
     if not body.strip():
-        _remember(done, article)
+        _finish(done, article, [], drafts, on_article)
         return _Read(None)
 
     def extract_current() -> list[ExtractedExhibition]:
@@ -246,16 +268,14 @@ def _read_chosen(
     if extracted is None:
         return _Read(_PageStop.BUDGET)
     raws, body_waits = extracted
-    _remember(done, article)
-    drafts.extend(
-        _drafts_from_article(
-            article,
-            raws,
-            image_url=image_url,
-            match_place_name=match_place_name,
-            today=today,
-        )
+    produced = _drafts_from_article(
+        article,
+        raws,
+        image_url=image_url,
+        match_place_name=match_place_name,
+        today=today,
     )
+    _finish(done, article, produced, drafts, on_article)
     return _Read(None, calls=1, waits=body_waits)
 
 
@@ -316,17 +336,46 @@ def run(settings: Settings) -> None:
 
     with httpx.Client(timeout=20.0) as client:
         cursor = None if settings.dry_run else fetch_news_cursor(client, settings)
-        seen_through = None if cursor is None else cursor.seen_through
-        resume_before = None if cursor is None else cursor.resume_before
         articles = _newest_first(
             fetch_news(
                 client,
                 settings,
-                seen_through=seen_through,
-                resume_before=resume_before,
+                seen_through=None if cursor is None else cursor.seen_through,
+                resume_before=None if cursor is None else cursor.resume_before,
+                unseen_from=None if cursor is None else cursor.unseen_from,
             )
         )
         done: set[str] = set()
+        drafts_by_url: dict[str, list[ExhibitionDraft]] = {}
+        sent: set[str] = set()
+        sent_drafts: list[ExhibitionDraft] = []
+        cursor_state = cursor
+        deleted = 0
+
+        def publish_ready(force: bool) -> None:
+            nonlocal cursor_state, deleted
+            batch = take_publish_batch(
+                articles,
+                done,
+                drafts_by_url,
+                sent,
+                sent_drafts=sent_drafts,
+                force=force,
+            )
+            if batch is None:
+                return
+            draft_list, urls = batch
+            advanced = next_news_cursor(cursor_state, articles, sent | set(urls))
+            deleted += publish_exhibitions(client, settings, draft_list, advanced)
+            sent.update(urls)
+            sent_drafts.extend(draft_list)
+            if advanced is not None:
+                cursor_state = advanced
+
+        def on_article(article: NewsArticle, produced: list[ExhibitionDraft]) -> None:
+            drafts_by_url[article.url] = produced
+            publish_ready(force=False)
+
         drafts = build_drafts(
             articles,
             select_ids=lambda batch: select_article_ids(settings, batch),
@@ -335,6 +384,7 @@ def run(settings: Settings) -> None:
             match_place_name=lambda place_name: match_place(client, settings, place_name),
             today=today,
             done=done,
+            on_article=None if settings.dry_run else on_article,
         )
         if settings.dry_run:
             for draft in drafts:
@@ -349,9 +399,114 @@ def run(settings: Settings) -> None:
             logger.info("collector done (dry-run, drafts=%s)", len(drafts))
             return
 
-        advanced = next_news_cursor(cursor, articles, done)
-        deleted = publish_exhibitions(client, settings, drafts, advanced)
+        publish_ready(force=True)
     logger.info("collector done (drafts=%s deleted_ended=%s)", len(drafts), deleted)
+
+
+def take_publish_batch(
+    articles: Sequence[NewsArticle],
+    done: set[str],
+    drafts_by_url: dict[str, list[ExhibitionDraft]],
+    sent: set[str],
+    *,
+    sent_drafts: Sequence[ExhibitionDraft] = (),
+    force: bool,
+    size: int = _PUBLISH_BATCH,
+) -> tuple[list[ExhibitionDraft], list[str]] | None:
+    """빈칸 없이 끝난 앞부분에서, 같은 전시를 걸러 기사 단위로 고른다."""
+    urls: list[str] = []
+    pending: list[ExhibitionDraft] = []
+    kept: list[ExhibitionDraft] = []
+    for article in articles:
+        if article.url not in done:
+            break
+        if article.url in sent:
+            continue
+        if not force and len(kept) >= size:
+            break
+        urls.append(article.url)
+        pending.extend(drafts_by_url.get(article.url, []))
+        kept = _collapse_drafts(pending, sent_drafts)
+        if not force and len(kept) >= size:
+            break
+    if not urls or (not force and len(kept) < size):
+        return None
+    return kept, urls
+
+
+def _collapse_drafts(
+    drafts: Sequence[ExhibitionDraft],
+    sent: Sequence[ExhibitionDraft],
+) -> list[ExhibitionDraft]:
+    """같은 기관의 같은 제목은 하나만 남긴다. 이미 보낸 것과 같으면 뺀다."""
+    kept: list[ExhibitionDraft] = []
+    for group in _exhibition_groups(drafts):
+        if any(_same_exhibition(draft, old) for draft in group for old in sent):
+            continue
+        kept.append(_prefer_draft(group))
+    return kept
+
+
+def _exhibition_groups(drafts: Sequence[ExhibitionDraft]) -> list[list[ExhibitionDraft]]:
+    parent = list(range(len(drafts)))
+
+    def find(index: int) -> int:
+        while parent[index] != index:
+            parent[index] = parent[parent[index]]
+            index = parent[index]
+        return index
+
+    for right, draft in enumerate(drafts):
+        for left in range(right):
+            if _same_exhibition(drafts[left], draft):
+                parent[find(right)] = find(left)
+    groups: dict[int, list[ExhibitionDraft]] = {}
+    for index, draft in enumerate(drafts):
+        groups.setdefault(find(index), []).append(draft)
+    return list(groups.values())
+
+
+def _same_exhibition(left: ExhibitionDraft, right: ExhibitionDraft) -> bool:
+    if _fold(left.place_name) != _fold(right.place_name):
+        return False
+    return _titles_match(_fold(left.title), _fold(right.title))
+
+
+def _titles_match(left: str, right: str) -> bool:
+    if left == right:
+        return True
+    shorter, longer = (left, right) if len(left) <= len(right) else (right, left)
+    return len(shorter) >= _TITLE_OVERLAP and shorter in longer
+
+
+def _prefer_draft(group: Sequence[ExhibitionDraft]) -> ExhibitionDraft:
+    chosen = group[0]
+    for candidate in group[1:]:
+        chosen = _prefer_one(chosen, candidate)
+    return chosen
+
+
+def _prefer_one(current: ExhibitionDraft, candidate: ExhibitionDraft) -> ExhibitionDraft:
+    current_dated = current.starts_on is not None
+    candidate_dated = candidate.starts_on is not None
+    if current_dated != candidate_dated:
+        return current if current_dated else candidate
+    if (
+        current.starts_on is not None
+        and candidate.starts_on is not None
+        and current.starts_on != candidate.starts_on
+    ):
+        return current if current.starts_on < candidate.starts_on else candidate
+    if len(current.summary) != len(candidate.summary):
+        return current if len(current.summary) > len(candidate.summary) else candidate
+    if len(current.title) != len(candidate.title):
+        return current if len(current.title) > len(candidate.title) else candidate
+    return current
+
+
+def _fold(value: str) -> str:
+    normalized = unicodedata.normalize("NFKC", value)
+    return "".join(char for char in normalized if char.isalnum()).casefold()
 
 
 def _newest_first(articles: list[NewsArticle]) -> list[NewsArticle]:
