@@ -190,6 +190,34 @@ def test_news_search_keeps_older_articles_while_backfill_remains() -> None:
     ]
 
 
+def test_news_search_stops_at_the_unseen_floor() -> None:
+    def handler(_request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            json={
+                "items": [
+                    _item("https://www.yna.co.kr/view/NEW", "Tue, 14 Oct 2026 09:00:00 +0900"),
+                    _item("https://www.yna.co.kr/view/OLD", "Wed, 01 Oct 2026 09:00:00 +0900"),
+                    _item("https://www.yna.co.kr/view/OLDER", "Tue, 15 Sep 2026 09:00:00 +0900"),
+                ]
+            },
+        )
+
+    with httpx.Client(transport=httpx.MockTransport(handler)) as client:
+        articles = fetch_news(
+            client,
+            _settings(),
+            seen_through=datetime(2026, 10, 13, 0, 0, tzinfo=_KST),
+            resume_before=datetime(2026, 10, 10, 0, 0, tzinfo=_KST),
+            unseen_from=datetime(2026, 10, 1, 0, 0, tzinfo=_KST),
+        )
+
+    assert [article.url for article in articles] == [
+        "https://www.yna.co.kr/view/NEW",
+        "https://www.yna.co.kr/view/OLD",
+    ]
+
+
 def _item(url: str, published: str) -> dict[str, str]:
     return {
         "title": "특별전",

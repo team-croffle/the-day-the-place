@@ -112,6 +112,18 @@ describe('selectExhibitions', () => {
     expect(selectExhibitions(rows, {}, TODAY).map((item) => item.id)).toEqual(['long', 'open']);
   });
 
+  it('keeps one card when the same title has two end dates', () => {
+    const kept = selectExhibitions(
+      [
+        row({ id: 'short', endsOn: '2026-12-31', summary: '짧다' }),
+        row({ id: 'long', endsOn: '2027-03-01', summary: '더 긴 요약을 남긴다.' }),
+      ],
+      {},
+      TODAY,
+    );
+    expect(kept.map((item) => item.id)).toEqual(['long']);
+  });
+
   it('drops a venue that is not a museum, memorial, or exhibition hall', () => {
     const kept = selectExhibitions(
       [

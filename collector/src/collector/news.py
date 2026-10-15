@@ -50,6 +50,7 @@ def _search_page(
     *,
     seen_through: datetime | None,
     resume_before: datetime | None,
+    unseen_from: datetime | None,
 ) -> tuple[int, list[NewsArticle], bool]:
     response = client.get(
         _NAVER_NEWS_URL,
@@ -76,10 +77,10 @@ def _search_page(
         if not isinstance(item, dict):
             continue
         published = _published_at(item.get("pubDate"))
-        if _passed_cursor(published, seen_through, resume_before):
+        if _passed_cursor(published, seen_through, resume_before, unseen_from):
             reached_old = True
             break
-        if not _in_range(published, seen_through, resume_before):
+        if not _in_range(published, seen_through, resume_before, unseen_from):
             continue
         title = plain_text(str(item.get("title") or ""))
         description = plain_text(str(item.get("description") or ""))
@@ -98,8 +99,9 @@ def _search_keyword(
     *,
     seen_through: datetime | None,
     resume_before: datetime | None,
+    unseen_from: datetime | None,
 ) -> list[NewsArticle]:
-    """연합뉴스가 상한만큼 차거나, 이미 처리한 시각에 닿으면 멈춘다."""
+    """연합뉴스가 상한만큼 차거나, 이미 처리한 시각이나 못 본 구간의 바닥에 닿으면 멈춘다."""
     found: list[NewsArticle] = []
     seen: set[str] = set()
     start = 1
@@ -115,6 +117,7 @@ def _search_keyword(
                 size,
                 seen_through=seen_through,
                 resume_before=resume_before,
+                unseen_from=unseen_from,
             )
         except httpx.HTTPStatusError as exc:
             logger.warning("네이버 뉴스 검색 실패: %s status=%s", keyword, exc.response.status_code)
@@ -139,6 +142,7 @@ def fetch_news(
     *,
     seen_through: datetime | None = None,
     resume_before: datetime | None = None,
+    unseen_from: datetime | None = None,
 ) -> list[NewsArticle]:
     """검색어마다 연합뉴스만 모으고, 같은 주소는 한 번만 남긴다."""
     found: list[NewsArticle] = []
@@ -150,6 +154,7 @@ def fetch_news(
             keyword,
             seen_through=seen_through,
             resume_before=resume_before,
+            unseen_from=unseen_from,
         )
         for article in batch:
             if article.url in seen:
@@ -197,6 +202,7 @@ def _in_range(
     published: datetime | None,
     seen_through: datetime | None,
     resume_before: datetime | None,
+    unseen_from: datetime | None,
 ) -> bool:
     """저장된 시각이 없으면 창 안의 기사를 모두 받는다."""
     if seen_through is None and resume_before is None:
@@ -205,16 +211,21 @@ def _in_range(
         return resume_before is not None
     if seen_through is not None and published > seen_through:
         return True
+    if resume_before is None or published > resume_before:
+        return False
     # 경계 시각과 같은 기사는 다시 받는다. 같은 초에 처리하지 못한 기사가 빠지지 않게 한다.
-    return resume_before is not None and published <= resume_before
+    return unseen_from is None or published >= unseen_from
 
 
 def _passed_cursor(
     published: datetime | None,
     seen_through: datetime | None,
     resume_before: datetime | None,
+    unseen_from: datetime | None,
 ) -> bool:
-    """이어 받는 중이 아니면, 이미 처리한 시각 이하에서 검색을 멈춘다."""
+    """못 본 구간의 바닥보다 오래되면 멈춘다. 구간이 없으면 이미 처리한 시각 이하에서 멈춘다."""
+    if unseen_from is not None and published is not None and published < unseen_from:
+        return True
     if resume_before is not None or seen_through is None or published is None:
         return False
     return published <= seen_through

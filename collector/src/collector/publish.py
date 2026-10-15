@@ -36,7 +36,11 @@ def fetch_news_cursor(client: httpx.Client, settings: Settings) -> NewsCursor | 
     seen = _parse_time(data.get("seenThrough"))
     if seen is None:
         return None
-    return NewsCursor(seen_through=seen, resume_before=_parse_time(data.get("resumeBefore")))
+    return NewsCursor(
+        seen_through=seen,
+        resume_before=_parse_time(data.get("resumeBefore")),
+        unseen_from=_parse_time(data.get("unseenFrom")),
+    )
 
 
 def publish_exhibitions(
@@ -111,6 +115,7 @@ def _cursor_payload(cursor: NewsCursor) -> dict[str, object]:
     return {
         "seenThrough": cursor.seen_through.isoformat(),
         "resumeBefore": cursor.resume_before.isoformat() if cursor.resume_before else None,
+        "unseenFrom": cursor.unseen_from.isoformat() if cursor.unseen_from else None,
     }
 
 

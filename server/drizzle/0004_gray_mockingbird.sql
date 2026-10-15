@@ -1,0 +1,1 @@
+ALTER TABLE "news_collect_cursors" ADD COLUMN "unseen_from" timestamp with time zone;

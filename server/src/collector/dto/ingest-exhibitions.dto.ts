@@ -62,6 +62,10 @@ export class IngestCursorDto {
   @IsOptional()
   @IsDateString()
   resumeBefore?: string | null;
+
+  @IsOptional()
+  @IsDateString()
+  unseenFrom?: string | null;
 }
 
 export class IngestExhibitionsDto {
