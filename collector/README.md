@@ -142,7 +142,7 @@ pnpm test:py
 ## 스키마 소유권
 
 `exhibitions` 와 수집 커서 테이블은 **Drizzle(`server/`)이 소유**한다.
-수집기는 마이그레이션도 INSERT 도 하지 않는다. 가공 결과를 `POST /api/collector/ingest` 로 보낸다.
+수집기는 마이그레이션도 INSERT 도 하지 않는다. 추출된 전시와 출처별 글 번호만 `POST /api/collector/ingest` 로 보낸다. 글 원문과 HTML은 보내지 않는다.
 컬럼을 바꾸려면 `server/src/database/schema/` 를 고치고 `pnpm db:generate` → `pnpm db:migrate`.
 
 ## 배포 1순위 — Modal
