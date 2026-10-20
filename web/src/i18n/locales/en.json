@@ -82,6 +82,7 @@
     "relicsEmpty": "No collection records for this museum.",
     "relicsError": "Could not load the collection.",
     "relicsLoading": "Loading the collection…",
+    "relicsCount": "{count} items",
     "relicEra": "Period",
     "relicMaterial": "Material",
     "designations": "National heritage here",

@@ -4,6 +4,7 @@ import {
   PLACE_KIND_LABELS,
   type Exhibition,
   type PlaceDetail,
+  type Paginated,
   type PlaceKind,
   type RelicDetail,
   type RelicSummary,
@@ -27,7 +28,8 @@ const { t, locale } = useI18n();
 const place = ref<PlaceDetail | null>(null);
 const exhibitions = ref<Exhibition[]>([]);
 const exhibitionsError = ref<string | null>(null);
-const relics = ref<RelicSummary[] | null>(null);
+const relics = ref<Paginated<RelicSummary> | null>(null);
+const relicPage = ref(1);
 const relicsError = ref<string | null>(null);
 const relicsPending = ref(false);
 const relicDetail = ref<RelicDetail | null>(null);
@@ -68,6 +70,7 @@ async function load(id: string): Promise<void> {
   exhibitions.value = [];
   exhibitionsError.value = null;
   relics.value = null;
+  relicPage.value = 1;
   relicsError.value = null;
   relicDetail.value = null;
   relicDetailError.value = null;
@@ -95,19 +98,29 @@ async function load(id: string): Promise<void> {
   }
 }
 
-async function loadRelics(id: string): Promise<void> {
+async function loadRelics(id: string, page = 1): Promise<void> {
   relicsPending.value = true;
   relicsError.value = null;
   relicDetail.value = null;
   relicDetailError.value = null;
   try {
-    relics.value = await apiFetch<RelicSummary[]>(`/${API_ROUTES.PLACES}/tour/${id}/relics`);
+    relics.value = await apiFetch<Paginated<RelicSummary>>(
+      `/${API_ROUTES.PLACES}/tour/${id}/relics?page=${page}`,
+    );
+    relicPage.value = relics.value.page;
   } catch (cause) {
-    relics.value = [];
+    relics.value = null;
     relicsError.value = cause instanceof Error ? cause.message : t('places.relicsError');
   } finally {
     relicsPending.value = false;
   }
+}
+
+function showRelicPage(page: number): void {
+  if (!place.value || relicsPending.value) {
+    return;
+  }
+  void loadRelics(place.value.id, page);
 }
 
 async function openRelic(relic: RelicSummary): Promise<void> {
@@ -326,18 +339,31 @@ watch(
           </template>
           <template v-else-if="tab === 'relics'">
             <h2 class="text-lg font-semibold">{{ t('places.tab.relics') }}</h2>
-            <p v-if="relicsPending" class="text-muted mt-3 text-sm">
+            <p v-if="relicsPending && !relics" class="text-muted mt-3 text-sm">
               {{ t('places.relicsLoading') }}
             </p>
             <p v-else-if="relicsError" class="mt-3 text-sm" role="alert">
               {{ t('places.relicsError') }}
             </p>
-            <p v-else-if="!relics || relics.length === 0" class="text-muted mt-3 text-sm">
+            <p v-else-if="!relics || relics.items.length === 0" class="text-muted mt-3 text-sm">
               {{ t('places.relicsEmpty') }}
             </p>
             <template v-else>
+              <p class="text-muted mt-2 text-sm">
+                {{
+                  t('places.relicsCount', {
+                    count: relics.total.toLocaleString(locale === 'en' ? 'en' : 'ko'),
+                  })
+                }}
+              </p>
               <div v-if="relicDetail" class="border-line mt-4 rounded-sm border p-4 text-sm">
-                <p class="font-semibold">{{ relicDetail.name }}</p>
+                <img
+                  v-if="relicDetail.hasImage"
+                  :src="relicImage(relicDetail.id)"
+                  alt=""
+                  class="bg-line mx-auto h-64 w-full object-contain"
+                />
+                <p class="mt-3 font-semibold">{{ relicDetail.name }}</p>
                 <p v-if="relicDetail.era" class="text-muted mt-2">
                   {{ t('places.relicEra') }} {{ relicDetail.era }}
                 </p>
@@ -349,18 +375,40 @@ watch(
                 {{ t('places.relicsError') }}
               </p>
               <ul class="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3">
-                <li v-for="item in relics" :key="item.id">
+                <li v-for="item in relics.items" :key="item.id">
                   <button type="button" class="w-full text-left" @click="openRelic(item)">
                     <img
                       v-if="item.hasImage"
                       :src="relicImage(item.id)"
                       alt=""
-                      class="bg-line h-40 w-full object-cover"
+                      class="bg-line h-44 w-full object-contain"
                     />
                     <p class="mt-2 text-sm">{{ item.name }}</p>
                   </button>
                 </li>
               </ul>
+              <div
+                v-if="relics.totalPages > 1"
+                class="mt-6 flex items-center justify-center gap-3 text-sm"
+              >
+                <button
+                  type="button"
+                  class="border-line rounded-sm border px-3 py-1 disabled:opacity-40"
+                  :disabled="relicPage <= 1 || relicsPending"
+                  @click="showRelicPage(relicPage - 1)"
+                >
+                  {{ t('places.prev') }}
+                </button>
+                <span class="text-muted">{{ relicPage }} / {{ relics.totalPages }}</span>
+                <button
+                  type="button"
+                  class="border-line rounded-sm border px-3 py-1 disabled:opacity-40"
+                  :disabled="relicPage >= relics.totalPages || relicsPending"
+                  @click="showRelicPage(relicPage + 1)"
+                >
+                  {{ t('places.next') }}
+                </button>
+              </div>
             </template>
           </template>
         </div>

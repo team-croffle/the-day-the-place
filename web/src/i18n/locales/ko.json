@@ -82,6 +82,7 @@
     "relicsEmpty": "이 박물관의 소장품 정보가 없습니다.",
     "relicsError": "소장품을 불러오지 못했습니다.",
     "relicsLoading": "소장품을 불러오는 중…",
+    "relicsCount": "전체 {count}건",
     "relicEra": "시대",
     "relicMaterial": "재질",
     "designations": "이곳의 국가유산",

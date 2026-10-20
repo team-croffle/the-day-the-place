@@ -5,6 +5,7 @@ import {
   museumCodeForName,
   relicsFromXml,
   toSummary,
+  totalFromXml,
 } from './emuseum';
 
 const LIST_XML = `<?xml version="1.0"?>
@@ -34,6 +35,20 @@ describe('e-museum relics', () => {
     expect(relicsFromXml(LIST_XML)).toHaveLength(1);
     expect(JSON.stringify(toSummary(relic!))).not.toContain('SECRET');
     expect(toSummary(relic!).hasImage).toBe(true);
+  });
+
+  it('uses the large thumbnail and the collection total', () => {
+    const xml = `<?xml version="1.0"?>
+<result><resultCode>0000</resultCode><totalCount>31521</totalCount><list><data>
+<item key="id" value="PS0100100100100000100000"/>
+<item key="nameKr" value="삼혈포"/>
+<item key="imgThumUriS" value="http://www.emuseum.go.kr/openapi/img?serviceKey=SECRET&amp;imageId=small"/>
+<item key="imgThumUriL" value="http://www.emuseum.go.kr/openapi/img?serviceKey=SECRET&amp;imageId=large"/>
+</data></list></result>`;
+    expect(relicsFromXml(xml)[0]?.imageUrl).toContain('imageId=large');
+    expect(relicsFromXml(xml)[0]?.imageUrl).not.toContain('imageId=small');
+    expect(totalFromXml(xml)).toBe(31521);
+    expect(JSON.stringify(toSummary(relicsFromXml(xml)[0]!))).not.toContain('SECRET');
   });
 
   it('reads era and material from the detail document', () => {

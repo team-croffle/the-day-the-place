@@ -1,10 +1,11 @@
-import type { RelicDetail, RelicSummary } from '@nest-vue/shared';
+import type { Paginated, RelicDetail, RelicSummary } from '@nest-vue/shared';
 
 const BASE_URL = 'https://apis.data.go.kr/1371027/openapi';
 const MUSEUM_PARENTS = ['PS01001', 'PS01002', 'PS01003', 'PS01004', 'PS01005'] as const;
-const PAGE_SIZE = 12;
+const PAGE_SIZE = 24;
 const DAY_MS = 24 * 60 * 60 * 1000;
 const IMAGE_BYTE_LIMIT = 2_000_000;
+const MAX_CACHED_IMAGES = 96;
 const RELIC_ID = /^PS\d{10,40}$/;
 
 export class EmuseumError extends Error {
@@ -30,6 +31,16 @@ interface StoredDetail extends StoredRelic {
 interface CacheEntry<T> {
   at: number;
   value: T;
+}
+
+interface RelicPage {
+  rows: StoredRelic[];
+  total: number;
+}
+
+interface KnownImage {
+  code: string;
+  url: string;
 }
 
 export function isRelicId(value: string): boolean {
@@ -60,7 +71,7 @@ export function relicsFromXml(xml: string): StoredRelic[] {
     if (!isRelicId(id) || !name) {
       return [];
     }
-    return [{ id, name, imageUrl: safeImageUrl(record.imgThumUriS ?? record.imgUri) }];
+    return [{ id, name, imageUrl: pickImageUrl(record) }];
   });
 }
 
@@ -82,7 +93,7 @@ export function detailFromXml(xml: string): StoredDetail | null {
     material: record.materialName2 || record.materialName1 || null,
     museumCode: record.museumCode || record.museumCode2 || null,
     museumName: record.museumName2 || null,
-    imageUrl: safeImageUrl(record.imgThumUriL ?? record.imgThumUriS ?? record.imgUri),
+    imageUrl: pickImageUrl(record),
   };
 }
 
@@ -96,6 +107,12 @@ export function museumsFromXml(xml: string): { name: string; code: string }[] {
     }
     return [{ code, name }];
   });
+}
+
+export function totalFromXml(xml: string): number {
+  const raw = xml.match(/<totalCount>(\d+)<\/totalCount>/)?.[1];
+  const total = raw ? Number(raw) : 0;
+  return Number.isFinite(total) ? total : 0;
 }
 
 export function toSummary(relic: StoredRelic): RelicSummary {
@@ -117,7 +134,8 @@ export class EmuseumCatalog {
   private readonly now: () => number;
   private readonly fetchImpl: typeof fetch;
   private museums: CacheEntry<Map<string, string>> | null = null;
-  private readonly pages = new Map<string, CacheEntry<StoredRelic[]>>();
+  private readonly pages = new Map<string, CacheEntry<RelicPage>>();
+  private readonly knownImages = new Map<string, CacheEntry<KnownImage>>();
   private readonly details = new Map<string, CacheEntry<StoredDetail>>();
   private readonly images = new Map<string, CacheEntry<{ body: Buffer; type: string }>>();
   private readonly pending = new Map<string, Promise<unknown>>();
@@ -128,13 +146,20 @@ export class EmuseumCatalog {
     this.fetchImpl = options.fetch ?? fetch;
   }
 
-  async listForMuseum(placeName: string): Promise<RelicSummary[]> {
+  async listForMuseum(placeName: string, pageNo: number): Promise<Paginated<RelicSummary>> {
     const code = await this.codeFor(placeName);
     if (!code) {
-      return [];
+      return { items: [], page: 1, size: PAGE_SIZE, total: 0, totalPages: 0 };
     }
-    const rows = await this.page(code);
-    return rows.map(toSummary);
+    const page = await this.page(code, pageNo);
+    const totalPages = page.total === 0 ? 0 : Math.ceil(page.total / PAGE_SIZE);
+    return {
+      items: page.rows.map(toSummary),
+      page: pageNo,
+      size: PAGE_SIZE,
+      total: page.total,
+      totalPages,
+    };
   }
 
   async detailForMuseum(placeName: string, relicId: string): Promise<RelicDetail | null> {
@@ -157,12 +182,15 @@ export class EmuseumCatalog {
     if (!code || !isRelicId(relicId)) {
       return null;
     }
-    const listed = (await this.page(code)).find((row) => row.id === relicId);
-    const source = listed ?? (await this.detail(relicId));
-    if (!source?.imageUrl || !belongsToListedOrDetail(source, code, placeName, listed)) {
+    const known = this.fresh(this.knownImages.get(relicId));
+    if (known?.code === code) {
+      return this.image(relicId, known.url);
+    }
+    const detail = await this.detail(relicId);
+    if (!detail?.imageUrl || !belongsToMuseum(detail, code, placeName)) {
       return null;
     }
-    return this.image(relicId, source.imageUrl);
+    return this.image(relicId, detail.imageUrl);
   }
 
   private async codeFor(placeName: string): Promise<string | null> {
@@ -192,20 +220,28 @@ export class EmuseumCatalog {
     });
   }
 
-  private page(code: string): Promise<StoredRelic[]> {
-    const cached = this.fresh(this.pages.get(code));
+  private page(code: string, pageNo: number): Promise<RelicPage> {
+    const key = `${code}:${pageNo}`;
+    const cached = this.fresh(this.pages.get(key));
     if (cached) {
       return Promise.resolve(cached);
     }
-    return this.once(`page:${code}`, async () => {
+    return this.once(`page:${key}`, async () => {
       const xml = await this.getXml('list', {
         museumCode: code,
         numOfRows: String(PAGE_SIZE),
-        pageNo: '1',
+        pageNo: String(pageNo),
       });
       const rows = relicsFromXml(xml).slice(0, PAGE_SIZE);
-      this.pages.set(code, { at: this.now(), value: rows });
-      return rows;
+      const value = { rows, total: totalFromXml(xml) };
+      const at = this.now();
+      this.pages.set(key, { at, value });
+      for (const row of rows) {
+        if (row.imageUrl) {
+          this.knownImages.set(row.id, { at, value: { code, url: row.imageUrl } });
+        }
+      }
+      return value;
     });
   }
 
@@ -240,7 +276,15 @@ export class EmuseumCatalog {
       }
       const type = response.headers.get('content-type')?.split(';')[0]?.trim() || 'image/jpeg';
       const image = { body: bytes, type: type.startsWith('image/') ? type : 'image/jpeg' };
+      this.images.delete(relicId);
       this.images.set(relicId, { at: this.now(), value: image });
+      while (this.images.size > MAX_CACHED_IMAGES) {
+        const oldest = this.images.keys().next().value;
+        if (oldest === undefined) {
+          break;
+        }
+        this.images.delete(oldest);
+      }
       return image;
     });
   }
@@ -325,18 +369,6 @@ function belongsToMuseum(detail: StoredDetail, code: string, placeName: string):
   return compactPlaceName(detail.museumName ?? '') === compactPlaceName(placeName);
 }
 
-function belongsToListedOrDetail(
-  source: StoredRelic | StoredDetail,
-  code: string,
-  placeName: string,
-  listed: StoredRelic | undefined,
-): boolean {
-  if (listed) {
-    return true;
-  }
-  return 'museumCode' in source && belongsToMuseum(source, code, placeName);
-}
-
 function assertOk(xml: string): void {
   const code = xml.match(/<resultCode>([^<]*)<\/resultCode>/)?.[1]?.trim();
   if (code && code !== '0000') {
@@ -352,6 +384,12 @@ function parseRecords(xml: string): Record<string, string>[] {
     }
     return record;
   });
+}
+
+function pickImageUrl(record: Record<string, string>): string | null {
+  return safeImageUrl(
+    record.imgThumUriL || record.imgThumUriM || record.imgUri || record.imgThumUriS,
+  );
 }
 
 function safeImageUrl(value: string | undefined): string | null {
