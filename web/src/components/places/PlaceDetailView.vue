@@ -5,13 +5,15 @@ import {
   type Exhibition,
   type PlaceDetail,
   type PlaceKind,
+  type RelicDetail,
+  type RelicSummary,
 } from '@nest-vue/shared';
 import { computed, onUnmounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { RouterLink } from 'vue-router';
 
 import ExhibitionCard from '@/components/exhibitions/ExhibitionCard.vue';
-import { ApiError, apiFetch } from '@/composables/useApi';
+import { ApiError, apiFetch, apiUrl } from '@/composables/useApi';
 
 const props = defineProps<{
   kind: PlaceKind;
@@ -25,9 +27,14 @@ const { t, locale } = useI18n();
 const place = ref<PlaceDetail | null>(null);
 const exhibitions = ref<Exhibition[]>([]);
 const exhibitionsError = ref<string | null>(null);
+const relics = ref<RelicSummary[] | null>(null);
+const relicsError = ref<string | null>(null);
+const relicsPending = ref(false);
+const relicDetail = ref<RelicDetail | null>(null);
+const relicDetailError = ref<string | null>(null);
 const error = ref<string | null>(null);
 const pending = ref(false);
-const tab = ref<'intro' | 'visit' | 'directions' | 'exhibitions'>('intro');
+const tab = ref<'intro' | 'visit' | 'directions' | 'exhibitions' | 'relics'>('intro');
 const openIndex = ref<number | null>(null);
 
 const photos = computed(() =>
@@ -51,7 +58,7 @@ const directionsUrl = computed(() => {
 
 const tabs = computed(() => {
   const base = ['intro', 'visit', 'directions'] as const;
-  return props.kind === 'museum' ? ([...base, 'exhibitions'] as const) : base;
+  return props.kind === 'museum' ? ([...base, 'exhibitions', 'relics'] as const) : base;
 });
 
 async function load(id: string): Promise<void> {
@@ -60,6 +67,10 @@ async function load(id: string): Promise<void> {
   place.value = null;
   exhibitions.value = [];
   exhibitionsError.value = null;
+  relics.value = null;
+  relicsError.value = null;
+  relicDetail.value = null;
+  relicDetailError.value = null;
   tab.value = 'intro';
   openIndex.value = null;
   try {
@@ -82,6 +93,41 @@ async function load(id: string): Promise<void> {
   } finally {
     pending.value = false;
   }
+}
+
+async function loadRelics(id: string): Promise<void> {
+  relicsPending.value = true;
+  relicsError.value = null;
+  relicDetail.value = null;
+  relicDetailError.value = null;
+  try {
+    relics.value = await apiFetch<RelicSummary[]>(`/${API_ROUTES.PLACES}/tour/${id}/relics`);
+  } catch (cause) {
+    relics.value = [];
+    relicsError.value = cause instanceof Error ? cause.message : t('places.relicsError');
+  } finally {
+    relicsPending.value = false;
+  }
+}
+
+async function openRelic(relic: RelicSummary): Promise<void> {
+  if (relicDetail.value?.id === relic.id) {
+    relicDetail.value = null;
+    return;
+  }
+  relicDetailError.value = null;
+  try {
+    relicDetail.value = await apiFetch<RelicDetail>(
+      `/${API_ROUTES.PLACES}/tour/${props.id}/relics/${relic.id}`,
+    );
+  } catch (cause) {
+    relicDetail.value = null;
+    relicDetailError.value = cause instanceof Error ? cause.message : t('places.relicsError');
+  }
+}
+
+function relicImage(id: string): string {
+  return apiUrl(`/${API_ROUTES.PLACES}/tour/${props.id}/relics/${id}/image`);
 }
 
 async function loadExhibitions(source: string, id: string): Promise<void> {
@@ -123,6 +169,12 @@ watch(openSrc, (src) => {
 
 onUnmounted(() => {
   window.removeEventListener('keydown', onPhotoKeydown);
+});
+
+watch(tab, (value) => {
+  if (value === 'relics' && place.value && relics.value === null && !relicsPending.value) {
+    void loadRelics(place.value.id);
+  }
 });
 
 watch(
@@ -258,7 +310,7 @@ watch(
               {{ t('places.directionsCta') }}
             </a>
           </template>
-          <template v-else>
+          <template v-else-if="tab === 'exhibitions'">
             <h2 class="text-lg font-semibold">{{ t('places.tab.exhibitions') }}</h2>
             <p v-if="exhibitionsError" class="mt-3 text-sm" role="alert">
               {{ t('places.exhibitionsError') }}
@@ -271,6 +323,45 @@ watch(
                 <ExhibitionCard :exhibition="item" />
               </li>
             </ul>
+          </template>
+          <template v-else-if="tab === 'relics'">
+            <h2 class="text-lg font-semibold">{{ t('places.tab.relics') }}</h2>
+            <p v-if="relicsPending" class="text-muted mt-3 text-sm">
+              {{ t('places.relicsLoading') }}
+            </p>
+            <p v-else-if="relicsError" class="mt-3 text-sm" role="alert">
+              {{ t('places.relicsError') }}
+            </p>
+            <p v-else-if="!relics || relics.length === 0" class="text-muted mt-3 text-sm">
+              {{ t('places.relicsEmpty') }}
+            </p>
+            <template v-else>
+              <div v-if="relicDetail" class="border-line mt-4 rounded-sm border p-4 text-sm">
+                <p class="font-semibold">{{ relicDetail.name }}</p>
+                <p v-if="relicDetail.era" class="text-muted mt-2">
+                  {{ t('places.relicEra') }} {{ relicDetail.era }}
+                </p>
+                <p v-if="relicDetail.material" class="text-muted mt-1">
+                  {{ t('places.relicMaterial') }} {{ relicDetail.material }}
+                </p>
+              </div>
+              <p v-if="relicDetailError" class="mt-3 text-sm" role="alert">
+                {{ t('places.relicsError') }}
+              </p>
+              <ul class="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3">
+                <li v-for="item in relics" :key="item.id">
+                  <button type="button" class="w-full text-left" @click="openRelic(item)">
+                    <img
+                      v-if="item.hasImage"
+                      :src="relicImage(item.id)"
+                      alt=""
+                      class="bg-line h-40 w-full object-cover"
+                    />
+                    <p class="mt-2 text-sm">{{ item.name }}</p>
+                  </button>
+                </li>
+              </ul>
+            </template>
           </template>
         </div>
 

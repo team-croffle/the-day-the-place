@@ -79,6 +79,11 @@
     "closePhoto": "닫기",
     "exhibitionsEmpty": "이 장소의 진행 중인 특별전이 없습니다.",
     "exhibitionsError": "전시를 불러오지 못했습니다.",
+    "relicsEmpty": "이 박물관의 소장품 정보가 없습니다.",
+    "relicsError": "소장품을 불러오지 못했습니다.",
+    "relicsLoading": "소장품을 불러오는 중…",
+    "relicEra": "시대",
+    "relicMaterial": "재질",
     "designations": "이곳의 국가유산",
     "noDesignations": "이 이름으로 찾은 국가유산이 없습니다.",
     "designationsError": "이곳의 국가유산을 불러오지 못했습니다.",
@@ -87,7 +92,8 @@
       "intro": "소개",
       "visit": "관람안내",
       "directions": "찾아오기",
-      "exhibitions": "전시"
+      "exhibitions": "전시",
+      "relics": "소장품"
     }
   },
   "museums": {

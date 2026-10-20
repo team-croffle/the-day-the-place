@@ -6,8 +6,10 @@ import {
   type PlaceDetail,
   type PlaceSearchResult,
   type PlaceSource,
+  type RelicDetail,
+  type RelicSummary,
 } from '@nest-vue/shared';
-import { BadRequestException, Controller, Get, Param, Query } from '@nestjs/common';
+import { BadRequestException, Controller, Get, Param, Query, StreamableFile } from '@nestjs/common';
 
 import { MapPlacesQueryDto } from './dto/map-places.query';
 import { SearchPlacesQueryDto } from './dto/search-places.query';
@@ -25,6 +27,28 @@ export class PlacesController {
   @Get('search')
   async search(@Query() query: SearchPlacesQueryDto): Promise<ApiResponse<PlaceSearchResult>> {
     return { data: await this.placesService.search(query) };
+  }
+
+  @Get('tour/:id/relics/:relicId/image')
+  async relicImage(
+    @Param('id') id: string,
+    @Param('relicId') relicId: string,
+  ): Promise<StreamableFile> {
+    const image = await this.placesService.relicImage(id, relicId);
+    return new StreamableFile(image.body, { type: image.type });
+  }
+
+  @Get('tour/:id/relics/:relicId')
+  async getRelic(
+    @Param('id') id: string,
+    @Param('relicId') relicId: string,
+  ): Promise<ApiResponse<RelicDetail>> {
+    return { data: await this.placesService.getRelic(id, relicId) };
+  }
+
+  @Get('tour/:id/relics')
+  async listRelics(@Param('id') id: string): Promise<ApiResponse<RelicSummary[]>> {
+    return { data: await this.placesService.listRelics(id) };
   }
 
   @Get(':source/:id')
