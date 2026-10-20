@@ -6,12 +6,14 @@ import {
   type PlaceDetail,
   type PlaceSearchResult,
   type PlaceSource,
+  type Paginated,
   type RelicDetail,
   type RelicSummary,
 } from '@nest-vue/shared';
 import { BadRequestException, Controller, Get, Param, Query, StreamableFile } from '@nestjs/common';
 
 import { MapPlacesQueryDto } from './dto/map-places.query';
+import { RelicsQueryDto } from './dto/relics.query';
 import { SearchPlacesQueryDto } from './dto/search-places.query';
 import { PlacesService } from './places.service';
 
@@ -47,8 +49,11 @@ export class PlacesController {
   }
 
   @Get('tour/:id/relics')
-  async listRelics(@Param('id') id: string): Promise<ApiResponse<RelicSummary[]>> {
-    return { data: await this.placesService.listRelics(id) };
+  async listRelics(
+    @Param('id') id: string,
+    @Query() query: RelicsQueryDto,
+  ): Promise<ApiResponse<Paginated<RelicSummary>>> {
+    return { data: await this.placesService.listRelics(id, query.page) };
   }
 
   @Get(':source/:id')

@@ -92,7 +92,7 @@ pnpm --filter @nest-vue/server test:e2e   # e2e (test/**/*.e2e-spec.ts)
 | DELETE | `/api/users/:id`                              | 삭제                                              |
 | GET    | `/api/exhibitions`                            | 전시 목록. 저장분과 전시정보(통합)을 합친다       |
 | GET    | `/api/exhibitions/:id`                        | 전시 한 건                                        |
-| GET    | `/api/places/tour/:id/relics`                 | 그 박물관의 e뮤지엄 소장품 한 페이지              |
+| GET    | `/api/places/tour/:id/relics?page=`           | 그 박물관의 e뮤지엄 소장품. `page`와 전체 건수    |
 | GET    | `/api/places/tour/:id/relics/:relicId`        | 소장품 한 점. 시대·재질                           |
 | GET    | `/api/places/tour/:id/relics/:relicId/image`  | 소장품 이미지. 원천 주소는 브라우저에 주지 않는다 |
 | GET    | `/api/collector/cursor`                       | 출처별 마지막 글 번호. 비밀 헤더 필요             |

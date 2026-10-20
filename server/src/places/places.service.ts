@@ -6,6 +6,7 @@ import {
   type PlaceSearchQuery,
   type PlaceSearchResult,
   type PlaceSource,
+  type Paginated,
   type RelicDetail,
   type RelicSummary,
 } from '@nest-vue/shared';
@@ -52,10 +53,10 @@ export class PlacesService {
     return detail;
   }
 
-  async listRelics(id: string): Promise<RelicSummary[]> {
+  async listRelics(id: string, page: number): Promise<Paginated<RelicSummary>> {
     const place = await this.museum(id);
     try {
-      return await this.emuseum().listForMuseum(place.name);
+      return await this.emuseum().listForMuseum(place.name, page);
     } catch (error) {
       throw this.relicFailure(error);
     }
