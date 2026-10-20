@@ -79,6 +79,11 @@
     "closePhoto": "Close",
     "exhibitionsEmpty": "No current exhibition for this place.",
     "exhibitionsError": "Could not load exhibitions.",
+    "relicsEmpty": "No collection records for this museum.",
+    "relicsError": "Could not load the collection.",
+    "relicsLoading": "Loading the collection…",
+    "relicEra": "Period",
+    "relicMaterial": "Material",
     "designations": "National heritage here",
     "noDesignations": "No national heritage matched this name.",
     "designationsError": "National heritage here could not be loaded.",
@@ -87,7 +92,8 @@
       "intro": "About",
       "visit": "Visit",
       "directions": "Directions",
-      "exhibitions": "Exhibitions"
+      "exhibitions": "Exhibitions",
+      "relics": "Collection"
     }
   },
   "museums": {

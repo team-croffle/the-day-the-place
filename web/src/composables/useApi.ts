@@ -13,6 +13,10 @@ export class ApiError extends Error {
   }
 }
 
+export function apiUrl(path: string): string {
+  return `${BASE_URL}${path}`;
+}
+
 /** ApiResponse<T> 봉투를 벗겨 T 만 돌려주는 fetch 래퍼 */
 export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`${BASE_URL}${path}`, {

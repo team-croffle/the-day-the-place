@@ -5,4 +5,5 @@ export * from './types/api';
 export * from './types/exhibition';
 export * from './types/health';
 export * from './types/place';
+export * from './types/relic';
 export * from './types/user';
