@@ -109,6 +109,19 @@ export function museumsFromXml(xml: string): { name: string; code: string }[] {
   });
 }
 
+/** 소장품 이름 검색어. 앞뒤 공백을 걷고 가운데 공백은 하나로 둔다. */
+export function relicNameQuery(value: string | undefined): string {
+  return (value ?? '').normalize('NFKC').trim().replace(/\s+/g, ' ').slice(0, 40);
+}
+
+/** 요청 페이지를 1과 마지막 페이지 사이로 맞춘다. 결과가 없으면 1이다. */
+export function clampRelicPage(page: number, totalPages: number): number {
+  if (totalPages <= 0) {
+    return 1;
+  }
+  return Math.min(Math.max(1, Math.trunc(page)), totalPages);
+}
+
 export function totalFromXml(xml: string): number {
   const raw = xml.match(/<totalCount>(\d+)<\/totalCount>/)?.[1];
   const total = raw ? Number(raw) : 0;
@@ -146,16 +159,29 @@ export class EmuseumCatalog {
     this.fetchImpl = options.fetch ?? fetch;
   }
 
-  async listForMuseum(placeName: string, pageNo: number): Promise<Paginated<RelicSummary>> {
+  async listForMuseum(
+    placeName: string,
+    pageNo: number,
+    name = '',
+  ): Promise<Paginated<RelicSummary>> {
     const code = await this.codeFor(placeName);
+    const query = relicNameQuery(name);
     if (!code) {
       return { items: [], page: 1, size: PAGE_SIZE, total: 0, totalPages: 0 };
     }
-    const page = await this.page(code, pageNo);
-    const totalPages = page.total === 0 ? 0 : Math.ceil(page.total / PAGE_SIZE);
+    const requested = Math.max(1, Math.trunc(pageNo));
+    let loadedPage = requested;
+    let known = await this.page(code, requested, query);
+    if (known.total === 0 && requested > 1) {
+      loadedPage = 1;
+      known = await this.page(code, 1, query);
+    }
+    const totalPages = known.total === 0 ? 0 : Math.ceil(known.total / PAGE_SIZE);
+    const resolved = clampRelicPage(requested, totalPages);
+    const page = loadedPage === resolved ? known : await this.page(code, resolved, query);
     return {
       items: page.rows.map(toSummary),
-      page: pageNo,
+      page: resolved,
       size: PAGE_SIZE,
       total: page.total,
       totalPages,
@@ -220,18 +246,22 @@ export class EmuseumCatalog {
     });
   }
 
-  private page(code: string, pageNo: number): Promise<RelicPage> {
-    const key = `${code}:${pageNo}`;
+  private page(code: string, pageNo: number, query: string): Promise<RelicPage> {
+    const key = `${code}:${pageNo}:${query}`;
     const cached = this.fresh(this.pages.get(key));
     if (cached) {
       return Promise.resolve(cached);
     }
     return this.once(`page:${key}`, async () => {
-      const xml = await this.getXml('list', {
+      const params: Record<string, string> = {
         museumCode: code,
         numOfRows: String(PAGE_SIZE),
         pageNo: String(pageNo),
-      });
+      };
+      if (query) {
+        params.name = query;
+      }
+      const xml = await this.getXml('list', params);
       const rows = relicsFromXml(xml).slice(0, PAGE_SIZE);
       const value = { rows, total: totalFromXml(xml) };
       const at = this.now();

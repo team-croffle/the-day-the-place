@@ -1,5 +1,5 @@
 import { Type } from 'class-transformer';
-import { IsInt, IsOptional, Min } from 'class-validator';
+import { IsInt, IsOptional, IsString, MaxLength, Min } from 'class-validator';
 
 export class RelicsQueryDto {
   @IsOptional()
@@ -7,4 +7,9 @@ export class RelicsQueryDto {
   @IsInt()
   @Min(1)
   page: number = 1;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(40)
+  q?: string;
 }
