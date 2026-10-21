@@ -1,7 +1,13 @@
 <script setup lang="ts">
-import type { MapPlacesQuery, PlaceKind, PlaceSummary } from '@nest-vue/shared';
+import {
+  MAP_REGION_CHIPS,
+  type MapPlacesQuery,
+  type PlaceKind,
+  type PlaceSummary,
+} from '@nest-vue/shared';
 import { computed, markRaw, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { useRoute } from 'vue-router';
 
 import KakaoMap from '@/components/map/KakaoMap.vue';
 import MapPinPopup from '@/components/map/MapPinPopup.vue';
@@ -15,15 +21,27 @@ import { MAP_REGION_VIEWS, nearestPlaces, placeInRegion, placeMatchesQuery } fro
 import type { KakaoMapInstance } from '@/types/kakao';
 
 const { t } = useI18n();
+const route = useRoute();
 const { places, error, pending, fetchAll } = useMapPlaces();
+
+function textQuery(value: unknown): string {
+  const raw = Array.isArray(value) ? value[0] : value;
+  return typeof raw === 'string' ? raw.trim().slice(0, 80) : '';
+}
+
+const initialQuery = textQuery(route.query.q);
+const regionCode = textQuery(route.query.region);
+const initialRegion = MAP_REGION_CHIPS.some((chip) => chip.code === regionCode)
+  ? regionCode
+  : 'all';
 
 const center = ref(SEOUL_CENTER);
 const mapInstance = shallowRef<KakaoMapInstance | null>(null);
 const sdkError = ref<string | null>(null);
 const zoomLevel = ref(7);
-const query = ref('');
-const queryForFilter = ref('');
-const region = ref('all');
+const query = ref(initialQuery);
+const queryForFilter = ref(initialQuery);
+const region = ref(initialRegion);
 const kinds = ref<Record<PlaceKind, boolean>>({ museum: true, site: true });
 const selectedId = ref<string | null>(null);
 const hasQuery = computed(() => queryForFilter.value.trim().length > 0);
@@ -66,6 +84,9 @@ const markerPlaces = computed(() => {
 
 onMounted(async () => {
   void fetchAll();
+  if (region.value !== 'all') {
+    return;
+  }
   center.value = await resolveMapCenter();
 });
 
@@ -95,7 +116,7 @@ watch(filteredPlaces, (list) => {
   }
 });
 
-watch(region, (code) => {
+function applyRegionView(code: string): void {
   const view = MAP_REGION_VIEWS[code];
   if (!view) {
     return;
@@ -103,7 +124,11 @@ watch(region, (code) => {
   center.value = { lat: view.lat, lng: view.lng };
   mapInstance.value?.setLevel(view.level);
   zoomLevel.value = view.level;
-});
+}
+
+applyRegionView(region.value);
+
+watch(region, applyRegionView);
 
 function onReady(map: KakaoMapInstance): void {
   sdkError.value = null;
