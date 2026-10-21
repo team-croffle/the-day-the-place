@@ -52,6 +52,7 @@
     "emptyList": "이 지역에 해당하는 장소가 없습니다.",
     "emptySearch": "검색과 맞는 장소가 없습니다.",
     "relicsTitle": "소장품",
+    "relicsSearchPlaceholder": "이름 일부로 검색…",
     "relicsCount": "소장품 {n}건",
     "relicsLoading": "소장품을 찾는 중…",
     "relicsEmpty": "이 이름의 소장품이 없습니다.",

@@ -76,6 +76,7 @@ const nearbyPlaces = computed(() => {
   return nearestPlaces(origin, pool, 3);
 });
 
+const relicQuery = ref('');
 const relicHits = ref<Paginated<RelicSearchHit> | null>(null);
 const relicHitsError = ref<string | null>(null);
 const relicHitsPending = ref(false);
@@ -124,9 +125,13 @@ async function loadRelicHits(name: string, page = 1): Promise<void> {
   }
 }
 
+function onRelicSearch(name: string): void {
+  relicQuery.value = name.trim().slice(0, 40);
+  void loadRelicHits(relicQuery.value, 1);
+}
+
 onMounted(async () => {
   void fetchAll();
-  void loadRelicHits(queryForFilter.value);
   if (region.value !== 'all') {
     return;
   }
@@ -140,10 +145,6 @@ onBeforeUnmount(() => {
     clearTimeout(queryTimer);
     queryTimer = null;
   }
-});
-
-watch(queryForFilter, (value) => {
-  void loadRelicHits(value);
 });
 
 watch(query, (value) => {
@@ -247,8 +248,10 @@ function onClearSelect(): void {
       :relics-pending="relicHitsPending"
       :relics-error="relicHitsError"
       :museums="places"
+      :relic-query="relicQuery"
       @select="onSelectFromList"
-      @relic-page="loadRelicHits(queryForFilter, $event)"
+      @relic-search="onRelicSearch"
+      @relic-page="loadRelicHits(relicQuery, $event)"
     />
     <div class="relative h-full min-h-0 min-w-0 flex-1 overflow-hidden">
       <KakaoMap
