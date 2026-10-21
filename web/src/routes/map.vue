@@ -1,9 +1,12 @@
 <script setup lang="ts">
 import {
+  API_ROUTES,
   MAP_REGION_CHIPS,
   type MapPlacesQuery,
+  type Paginated,
   type PlaceKind,
   type PlaceSummary,
+  type RelicSearchHit,
 } from '@nest-vue/shared';
 import { computed, markRaw, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
@@ -14,6 +17,7 @@ import MapPinPopup from '@/components/map/MapPinPopup.vue';
 import MapPreview from '@/components/map/MapPreview.vue';
 import MapSidebar from '@/components/map/MapSidebar.vue';
 import PlaceMarkers from '@/components/map/PlaceMarkers.vue';
+import { apiFetch } from '@/composables/useApi';
 import { resolveMapCenter, SEOUL_CENTER } from '@/composables/useGeolocation';
 import { useMapPlaces } from '@/composables/useMapPlaces';
 import { isKakaoMapsReady } from '@/lib/kakaoMap';
@@ -72,6 +76,11 @@ const nearbyPlaces = computed(() => {
   return nearestPlaces(origin, pool, 3);
 });
 
+const relicHits = ref<Paginated<RelicSearchHit> | null>(null);
+const relicHitsError = ref<string | null>(null);
+const relicHitsPending = ref(false);
+let relicRequest = 0;
+
 const markerPlaces = computed(() => {
   if (selectedPlace.value) {
     return [selectedPlace.value];
@@ -82,8 +91,42 @@ const markerPlaces = computed(() => {
   return filteredPlaces.value;
 });
 
+async function loadRelicHits(name: string, page = 1): Promise<void> {
+  const request = ++relicRequest;
+  const queryName = name.trim();
+  if (!queryName) {
+    relicHits.value = null;
+    relicHitsError.value = null;
+    relicHitsPending.value = false;
+    return;
+  }
+  relicHitsPending.value = true;
+  relicHitsError.value = null;
+  try {
+    const params = new URLSearchParams({ q: queryName, page: String(page) });
+    const pageResult = await apiFetch<Paginated<RelicSearchHit>>(
+      `/${API_ROUTES.PLACES}/relics?${params}`,
+    );
+    if (request !== relicRequest) {
+      return;
+    }
+    relicHits.value = pageResult;
+  } catch (cause) {
+    if (request !== relicRequest) {
+      return;
+    }
+    relicHits.value = null;
+    relicHitsError.value = cause instanceof Error ? cause.message : t('map.relicsError');
+  } finally {
+    if (request === relicRequest) {
+      relicHitsPending.value = false;
+    }
+  }
+}
+
 onMounted(async () => {
   void fetchAll();
+  void loadRelicHits(queryForFilter.value);
   if (region.value !== 'all') {
     return;
   }
@@ -97,6 +140,10 @@ onBeforeUnmount(() => {
     clearTimeout(queryTimer);
     queryTimer = null;
   }
+});
+
+watch(queryForFilter, (value) => {
+  void loadRelicHits(value);
 });
 
 watch(query, (value) => {
@@ -196,7 +243,12 @@ function onClearSelect(): void {
       :count="filteredPlaces.length"
       :selected-id="selectedId"
       :searching="hasQuery"
+      :relics="relicHits"
+      :relics-pending="relicHitsPending"
+      :relics-error="relicHitsError"
+      :museums="places"
       @select="onSelectFromList"
+      @relic-page="loadRelicHits(queryForFilter, $event)"
     />
     <div class="relative h-full min-h-0 min-w-0 flex-1 overflow-hidden">
       <KakaoMap

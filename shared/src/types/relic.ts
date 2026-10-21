@@ -5,6 +5,11 @@ export interface RelicSummary {
   hasImage: boolean;
 }
 
+/** 기관을 모르는 이름 검색의 한 점. 소장 기관 이름을 같이 둔다. */
+export interface RelicSearchHit extends RelicSummary {
+  museumName: string;
+}
+
 /** 한 점을 열었을 때의 소장품. 시대와 재질은 상세 응답에만 있다. */
 export interface RelicDetail {
   id: string;

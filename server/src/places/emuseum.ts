@@ -1,4 +1,4 @@
-import type { Paginated, RelicDetail, RelicSummary } from '@nest-vue/shared';
+import type { Paginated, RelicDetail, RelicSearchHit, RelicSummary } from '@nest-vue/shared';
 
 const BASE_URL = 'https://apis.data.go.kr/1371027/openapi';
 const MUSEUM_PARENTS = ['PS01001', 'PS01002', 'PS01003', 'PS01004', 'PS01005'] as const;
@@ -19,13 +19,13 @@ interface StoredRelic {
   id: string;
   name: string;
   imageUrl: string | null;
+  museumName: string;
 }
 
 interface StoredDetail extends StoredRelic {
   era: string | null;
   material: string | null;
   museumCode: string | null;
-  museumName: string | null;
 }
 
 interface CacheEntry<T> {
@@ -67,11 +67,11 @@ export function relicsFromXml(xml: string): StoredRelic[] {
   assertOk(xml);
   return parseRecords(xml).flatMap((record) => {
     const id = record.id ?? '';
-    const name = record.nameKr || record.name || '';
+    const name = displayName(record.nameKr || record.name || '');
     if (!isRelicId(id) || !name) {
       return [];
     }
-    return [{ id, name, imageUrl: pickImageUrl(record) }];
+    return [{ id, name, imageUrl: pickImageUrl(record), museumName: museumNameFrom(record) }];
   });
 }
 
@@ -82,7 +82,7 @@ export function detailFromXml(xml: string): StoredDetail | null {
     return null;
   }
   const id = record.id ?? '';
-  const name = record.nameKr || record.name || '';
+  const name = displayName(record.nameKr || record.name || '');
   if (!isRelicId(id) || !name) {
     return null;
   }
@@ -92,7 +92,7 @@ export function detailFromXml(xml: string): StoredDetail | null {
     era: record.nationalityName1 || record.nationalityName2 || null,
     material: record.materialName2 || record.materialName1 || null,
     museumCode: record.museumCode || record.museumCode2 || null,
-    museumName: record.museumName2 || null,
+    museumName: museumNameFrom(record),
     imageUrl: pickImageUrl(record),
   };
 }
@@ -101,7 +101,7 @@ export function museumsFromXml(xml: string): { name: string; code: string }[] {
   assertOk(xml);
   return parseRecords(xml).flatMap((record) => {
     const code = record.code ?? '';
-    const name = record.nameKr || record.name || '';
+    const name = displayName(record.nameKr || record.name || '');
     if (!code || !name) {
       return [];
     }
@@ -130,6 +130,10 @@ export function totalFromXml(xml: string): number {
 
 export function toSummary(relic: StoredRelic): RelicSummary {
   return { id: relic.id, name: relic.name, hasImage: relic.imageUrl !== null };
+}
+
+export function toSearchHit(relic: StoredRelic): RelicSearchHit {
+  return { ...toSummary(relic), museumName: relic.museumName };
 }
 
 export function toDetail(relic: StoredDetail): RelicDetail {
@@ -219,6 +223,45 @@ export class EmuseumCatalog {
     return this.image(relicId, detail.imageUrl);
   }
 
+  async searchByName(name: string, pageNo: number): Promise<Paginated<RelicSearchHit>> {
+    const query = relicNameQuery(name);
+    if (!query) {
+      return { items: [], page: 1, size: PAGE_SIZE, total: 0, totalPages: 0 };
+    }
+    const requested = Math.max(1, Math.trunc(pageNo));
+    let loadedPage = requested;
+    let known = await this.page(null, requested, query);
+    if (known.total === 0 && requested > 1) {
+      loadedPage = 1;
+      known = await this.page(null, 1, query);
+    }
+    const totalPages = known.total === 0 ? 0 : Math.ceil(known.total / PAGE_SIZE);
+    const resolved = clampRelicPage(requested, totalPages);
+    const page = loadedPage === resolved ? known : await this.page(null, resolved, query);
+    return {
+      items: page.rows.map(toSearchHit),
+      page: resolved,
+      size: PAGE_SIZE,
+      total: page.total,
+      totalPages,
+    };
+  }
+
+  async imageForRelic(relicId: string): Promise<{ body: Buffer; type: string } | null> {
+    if (!isRelicId(relicId)) {
+      return null;
+    }
+    const known = this.fresh(this.knownImages.get(relicId));
+    if (known) {
+      return this.image(relicId, known.url);
+    }
+    const detail = await this.detail(relicId);
+    if (!detail?.imageUrl) {
+      return null;
+    }
+    return this.image(relicId, detail.imageUrl);
+  }
+
   private async codeFor(placeName: string): Promise<string | null> {
     const index = await this.museumIndex();
     return index.get(compactPlaceName(placeName)) ?? null;
@@ -246,18 +289,20 @@ export class EmuseumCatalog {
     });
   }
 
-  private page(code: string, pageNo: number, query: string): Promise<RelicPage> {
-    const key = `${code}:${pageNo}:${query}`;
+  private page(code: string | null, pageNo: number, query: string): Promise<RelicPage> {
+    const key = `${code ?? ''}:${pageNo}:${query}`;
     const cached = this.fresh(this.pages.get(key));
     if (cached) {
       return Promise.resolve(cached);
     }
     return this.once(`page:${key}`, async () => {
       const params: Record<string, string> = {
-        museumCode: code,
         numOfRows: String(PAGE_SIZE),
         pageNo: String(pageNo),
       };
+      if (code) {
+        params.museumCode = code;
+      }
       if (query) {
         params.name = query;
       }
@@ -268,7 +313,7 @@ export class EmuseumCatalog {
       this.pages.set(key, { at, value });
       for (const row of rows) {
         if (row.imageUrl) {
-          this.knownImages.set(row.id, { at, value: { code, url: row.imageUrl } });
+          this.knownImages.set(row.id, { at, value: { code: code ?? '', url: row.imageUrl } });
         }
       }
       return value;
@@ -416,6 +461,10 @@ function parseRecords(xml: string): Record<string, string>[] {
   });
 }
 
+function museumNameFrom(record: Record<string, string>): string {
+  return record.museumName2 || record.museumName1 || record.museumName3 || '';
+}
+
 function pickImageUrl(record: Record<string, string>): string | null {
   return safeImageUrl(
     record.imgThumUriL || record.imgThumUriM || record.imgUri || record.imgThumUriS,
@@ -441,13 +490,29 @@ function safeImageUrl(value: string | undefined): string | null {
   }
 }
 
+function displayName(value: string): string {
+  return value.replace(/\s+/g, ' ').trim();
+}
+
 function unescapeXml(value: string): string {
   return value
     .replace(/&amp;/g, '&')
+    .replace(/&#(\d+);/g, (_, digits: string) => xmlChar(Number(digits)))
+    .replace(/&#x([0-9a-f]+);/gi, (_, digits: string) => xmlChar(Number.parseInt(digits, 16)))
     .replace(/&lt;/g, '<')
     .replace(/&gt;/g, '>')
     .replace(/&quot;/g, '"')
     .replace(/&apos;/g, "'");
+}
+
+function xmlChar(code: number): string {
+  if (!Number.isInteger(code) || code < 0 || code > 0x10ffff) {
+    return '';
+  }
+  if (code < 32 || code === 127) {
+    return ' ';
+  }
+  return String.fromCodePoint(code);
 }
 
 function decodeServiceKey(apiKey: string): string {

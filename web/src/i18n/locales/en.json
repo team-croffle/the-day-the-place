@@ -51,6 +51,11 @@
     "showingCount": "{n} places",
     "emptyList": "No places in this region.",
     "emptySearch": "No places match this search.",
+    "relicsTitle": "Collection",
+    "relicsCount": "{n} objects",
+    "relicsLoading": "Looking up the collection…",
+    "relicsEmpty": "No objects match this name.",
+    "relicsError": "Could not look up the collection.",
     "previewClose": "Close",
     "nearby": "Nearby"
   },

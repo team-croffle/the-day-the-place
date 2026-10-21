@@ -8,6 +8,7 @@ import {
   type PlaceSource,
   type Paginated,
   type RelicDetail,
+  type RelicSearchHit,
   type RelicSummary,
 } from '@nest-vue/shared';
 import { BadRequestException, Controller, Get, Param, Query, StreamableFile } from '@nestjs/common';
@@ -29,6 +30,19 @@ export class PlacesController {
   @Get('search')
   async search(@Query() query: SearchPlacesQueryDto): Promise<ApiResponse<PlaceSearchResult>> {
     return { data: await this.placesService.search(query) };
+  }
+
+  @Get('relics/:relicId/image')
+  async relicImageById(@Param('relicId') relicId: string): Promise<StreamableFile> {
+    const image = await this.placesService.relicImageById(relicId);
+    return new StreamableFile(image.body, { type: image.type });
+  }
+
+  @Get('relics')
+  async searchRelics(
+    @Query() query: RelicsQueryDto,
+  ): Promise<ApiResponse<Paginated<RelicSearchHit>>> {
+    return { data: await this.placesService.searchRelics(query.page, query.q ?? '') };
   }
 
   @Get('tour/:id/relics/:relicId/image')
