@@ -20,7 +20,15 @@ const eras = [
 ] as const;
 
 function search(): void {
-  void router.push({ path: '/map' });
+  const query: Record<string, string> = {};
+  const name = q.value.trim();
+  if (name) {
+    query.q = name;
+  }
+  if (region.value !== 'all') {
+    query.region = region.value;
+  }
+  void router.push({ path: '/map', query });
 }
 </script>
 
