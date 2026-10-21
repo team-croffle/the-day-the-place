@@ -30,6 +30,9 @@ const exhibitions = ref<Exhibition[]>([]);
 const exhibitionsError = ref<string | null>(null);
 const relics = ref<Paginated<RelicSummary> | null>(null);
 const relicPage = ref(1);
+const relicPageInput = ref('1');
+const relicQueryInput = ref('');
+const relicQuery = ref('');
 const relicsError = ref<string | null>(null);
 const relicsPending = ref(false);
 const relicDetail = ref<RelicDetail | null>(null);
@@ -71,6 +74,9 @@ async function load(id: string): Promise<void> {
   exhibitionsError.value = null;
   relics.value = null;
   relicPage.value = 1;
+  relicPageInput.value = '1';
+  relicQueryInput.value = '';
+  relicQuery.value = '';
   relicsError.value = null;
   relicDetail.value = null;
   relicDetailError.value = null;
@@ -104,10 +110,15 @@ async function loadRelics(id: string, page = 1): Promise<void> {
   relicDetail.value = null;
   relicDetailError.value = null;
   try {
+    const params = new URLSearchParams({ page: String(page) });
+    if (relicQuery.value) {
+      params.set('q', relicQuery.value);
+    }
     relics.value = await apiFetch<Paginated<RelicSummary>>(
-      `/${API_ROUTES.PLACES}/tour/${id}/relics?page=${page}`,
+      `/${API_ROUTES.PLACES}/tour/${id}/relics?${params}`,
     );
     relicPage.value = relics.value.page;
+    relicPageInput.value = String(relics.value.page);
   } catch (cause) {
     relics.value = null;
     relicsError.value = cause instanceof Error ? cause.message : t('places.relicsError');
@@ -121,6 +132,26 @@ function showRelicPage(page: number): void {
     return;
   }
   void loadRelics(place.value.id, page);
+}
+
+function submitRelicSearch(): void {
+  if (!place.value || relicsPending.value) {
+    return;
+  }
+  relicQuery.value = relicQueryInput.value.trim();
+  void loadRelics(place.value.id, 1);
+}
+
+function submitRelicPage(): void {
+  const raw = Number(relicPageInput.value);
+  if (!Number.isInteger(raw)) {
+    relicPageInput.value = String(relicPage.value);
+    return;
+  }
+  const last = relics.value?.totalPages ?? raw;
+  const page = last > 0 ? Math.min(Math.max(1, raw), last) : Math.max(1, raw);
+  relicPageInput.value = String(page);
+  showRelicPage(page);
 }
 
 async function openRelic(relic: RelicSummary): Promise<void> {
@@ -339,6 +370,31 @@ watch(
           </template>
           <template v-else-if="tab === 'relics'">
             <h2 class="text-lg font-semibold">{{ t('places.tab.relics') }}</h2>
+            <form class="mt-3 flex gap-2" @submit.prevent="submitRelicSearch">
+              <label class="sr-only" for="relic-search">{{ t('places.relicsSearch') }}</label>
+              <input
+                id="relic-search"
+                v-model="relicQueryInput"
+                type="search"
+                maxlength="40"
+                class="border-line placeholder:text-muted focus:border-ink w-full rounded-sm border bg-white px-3 py-2 text-sm outline-none"
+                :placeholder="t('places.relicsSearchPlaceholder')"
+              />
+              <button
+                type="submit"
+                class="border-line shrink-0 rounded-sm border px-3 py-2 text-sm disabled:opacity-40"
+                :disabled="relicsPending"
+              >
+                {{ t('places.search') }}
+              </button>
+            </form>
+            <p v-if="relics" class="text-muted mt-2 text-sm">
+              {{
+                t('places.relicsCount', {
+                  count: relics.total.toLocaleString(locale === 'en' ? 'en' : 'ko'),
+                })
+              }}
+            </p>
             <p v-if="relicsPending && !relics" class="text-muted mt-3 text-sm">
               {{ t('places.relicsLoading') }}
             </p>
@@ -349,13 +405,6 @@ watch(
               {{ t('places.relicsEmpty') }}
             </p>
             <template v-else>
-              <p class="text-muted mt-2 text-sm">
-                {{
-                  t('places.relicsCount', {
-                    count: relics.total.toLocaleString(locale === 'en' ? 'en' : 'ko'),
-                  })
-                }}
-              </p>
               <div v-if="relicDetail" class="border-line mt-4 rounded-sm border p-4 text-sm">
                 <img
                   v-if="relicDetail.hasImage"
@@ -399,7 +448,23 @@ watch(
                 >
                   {{ t('places.prev') }}
                 </button>
-                <span class="text-muted">{{ relicPage }} / {{ relics.totalPages }}</span>
+                <form class="flex items-center gap-2" @submit.prevent="submitRelicPage">
+                  <label class="sr-only" for="relic-page">{{ t('places.relicsPage') }}</label>
+                  <input
+                    id="relic-page"
+                    v-model="relicPageInput"
+                    inputmode="numeric"
+                    class="border-line focus:border-ink w-16 rounded-sm border bg-white px-2 py-1 text-center text-sm outline-none"
+                  />
+                  <span class="text-muted">/ {{ relics.totalPages }}</span>
+                  <button
+                    type="submit"
+                    class="border-line rounded-sm border px-3 py-1 disabled:opacity-40"
+                    :disabled="relicsPending"
+                  >
+                    {{ t('places.relicsGo') }}
+                  </button>
+                </form>
                 <button
                   type="button"
                   class="border-line rounded-sm border px-3 py-1 disabled:opacity-40"

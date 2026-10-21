@@ -53,7 +53,7 @@ export class PlacesController {
     @Param('id') id: string,
     @Query() query: RelicsQueryDto,
   ): Promise<ApiResponse<Paginated<RelicSummary>>> {
-    return { data: await this.placesService.listRelics(id, query.page) };
+    return { data: await this.placesService.listRelics(id, query.page, query.q ?? '') };
   }
 
   @Get(':source/:id')

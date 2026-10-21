@@ -53,10 +53,10 @@ export class PlacesService {
     return detail;
   }
 
-  async listRelics(id: string, page: number): Promise<Paginated<RelicSummary>> {
+  async listRelics(id: string, page: number, name: string): Promise<Paginated<RelicSummary>> {
     const place = await this.museum(id);
     try {
-      return await this.emuseum().listForMuseum(place.name, page);
+      return await this.emuseum().listForMuseum(place.name, page, name);
     } catch (error) {
       throw this.relicFailure(error);
     }

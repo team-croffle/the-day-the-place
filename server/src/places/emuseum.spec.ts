@@ -3,6 +3,8 @@ import {
   detailFromXml,
   EmuseumError,
   museumCodeForName,
+  clampRelicPage,
+  relicNameQuery,
   relicsFromXml,
   toSummary,
   totalFromXml,
@@ -61,6 +63,14 @@ describe('e-museum relics', () => {
 <item key="museumName2" value="국립중앙박물관"/>
 </data></list></result>`);
     expect(detail).toMatchObject({ era: '한국', material: '철', museumCode: 'PS01001001' });
+  });
+
+  it('trims a relic name and keeps a page inside the result', () => {
+    expect(relicNameQuery('  금  관  ')).toBe('금 관');
+    expect(relicNameQuery(undefined)).toBe('');
+    expect(clampRelicPage(9000, 3)).toBe(3);
+    expect(clampRelicPage(0, 3)).toBe(1);
+    expect(clampRelicPage(4, 0)).toBe(1);
   });
 
   it('rejects an upstream result code', () => {
