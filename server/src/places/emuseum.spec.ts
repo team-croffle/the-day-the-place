@@ -53,6 +53,23 @@ describe('e-museum relics', () => {
     expect(JSON.stringify(toSummary(relicsFromXml(xml)[0]!))).not.toContain('SECRET');
   });
 
+  it('keeps the holding museum on a name search row', () => {
+    const [relic] = relicsFromXml(`<result><resultCode>0000</resultCode><list><data>
+<item key="id" value="PS0100100300100533300000"/>
+<item key="nameKr" value="백제금동대향로"/>
+<item key="museumName2" value="국립부여박물관"/>
+</data></list></result>`);
+    expect(relic?.museumName).toBe('국립부여박물관');
+  });
+
+  it('turns line breaks inside a relic name into spaces', () => {
+    const [relic] = relicsFromXml(`<result><resultCode>0000</resultCode><list><data>
+<item key="id" value="PS0100426900700074800000"/>
+<item key="nameKr" value="특별전&#10;백제예술"/>
+</data></list></result>`);
+    expect(relic?.name).toBe('특별전 백제예술');
+  });
+
   it('reads era and material from the detail document', () => {
     const detail = detailFromXml(`<result><resultCode>0000</resultCode><list><data>
 <item key="id" value="PS0100100100100000100000"/>

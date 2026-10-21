@@ -8,6 +8,7 @@ import {
   type PlaceSource,
   type Paginated,
   type RelicDetail,
+  type RelicSearchHit,
   type RelicSummary,
 } from '@nest-vue/shared';
 import { BadGatewayException, Injectable, NotFoundException } from '@nestjs/common';
@@ -51,6 +52,32 @@ export class PlacesService {
       detail.designations = null;
     }
     return detail;
+  }
+
+  async searchRelics(page: number, name: string): Promise<Paginated<RelicSearchHit>> {
+    try {
+      return await this.emuseum().searchByName(name, page);
+    } catch (error) {
+      throw this.relicFailure(error);
+    }
+  }
+
+  async relicImageById(relicId: string): Promise<{ body: Buffer; type: string }> {
+    if (!isRelicId(relicId)) {
+      throw new NotFoundException('Relic not found');
+    }
+    try {
+      const image = await this.emuseum().imageForRelic(relicId);
+      if (!image) {
+        throw new NotFoundException('Relic not found');
+      }
+      return image;
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw this.relicFailure(error);
+    }
   }
 
   async listRelics(id: string, page: number, name: string): Promise<Paginated<RelicSummary>> {

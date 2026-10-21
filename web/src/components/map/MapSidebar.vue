@@ -1,12 +1,18 @@
 <script setup lang="ts">
 import {
+  API_ROUTES,
   MAP_REGION_CHIPS,
   PLACE_KIND_LABELS,
+  type Paginated,
   type PlaceKind,
   type PlaceSummary,
+  type RelicSearchHit,
 } from '@nest-vue/shared';
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { RouterLink } from 'vue-router';
+
+import { apiUrl } from '@/composables/useApi';
 
 const ITEM_H = 84;
 const OVERSCAN = 8;
@@ -22,11 +28,35 @@ const props = defineProps<{
   count: number;
   selectedId: string | null;
   searching: boolean;
+  relics: Paginated<RelicSearchHit> | null;
+  relicsPending: boolean;
+  relicsError: string | null;
+  museums: PlaceSummary[];
 }>();
 
 const emit = defineEmits<{
   select: [place: PlaceSummary];
+  relicPage: [page: number];
 }>();
+
+function compactName(value: string): string {
+  return value.normalize('NFKC').replace(/\s+/g, '');
+}
+
+function museumPath(name: string): string | null {
+  const target = compactName(name);
+  if (!target) {
+    return null;
+  }
+  const place = props.museums.find(
+    (item) => item.kind === 'museum' && compactName(item.name) === target,
+  );
+  return place ? `/museums/${place.id}` : null;
+}
+
+function relicImage(id: string): string {
+  return apiUrl(`/${API_ROUTES.PLACES}/relics/${id}/image`);
+}
 
 const scroller = ref<HTMLElement | null>(null);
 const scrollTop = ref(0);
@@ -146,6 +176,64 @@ onBeforeUnmount(() => {
     <p class="text-muted shrink-0 px-4 py-2 text-xs">
       {{ t('map.showingCount', { n: count }) }}
     </p>
+
+    <section v-if="searching" class="border-line shrink-0 border-b px-4 py-3">
+      <h2 class="text-sm font-semibold">{{ t('map.relicsTitle') }}</h2>
+      <p v-if="relicsPending && !relics" class="text-muted mt-2 text-xs">
+        {{ t('map.relicsLoading') }}
+      </p>
+      <p v-else-if="relicsError" class="mt-2 text-xs" role="alert">{{ t('map.relicsError') }}</p>
+      <p v-else-if="!relics || relics.items.length === 0" class="text-muted mt-2 text-xs">
+        {{ t('map.relicsEmpty') }}
+      </p>
+      <template v-else>
+        <p class="text-muted mt-1 text-xs">
+          {{
+            t('map.relicsCount', { n: relics.total.toLocaleString(locale === 'en' ? 'en' : 'ko') })
+          }}
+        </p>
+        <ul class="mt-2 max-h-52 space-y-2 overflow-y-auto">
+          <li v-for="item in relics.items" :key="item.id" class="flex items-start gap-2">
+            <img
+              v-if="item.hasImage"
+              :src="relicImage(item.id)"
+              alt=""
+              class="bg-line h-12 w-12 shrink-0 object-contain"
+            />
+            <span class="min-w-0">
+              <span class="block truncate text-sm">{{ item.name }}</span>
+              <RouterLink
+                v-if="museumPath(item.museumName)"
+                :to="museumPath(item.museumName)!"
+                class="text-gold block truncate text-xs"
+              >
+                {{ item.museumName }}
+              </RouterLink>
+              <span v-else class="text-muted block truncate text-xs">{{ item.museumName }}</span>
+            </span>
+          </li>
+        </ul>
+        <div v-if="relics.totalPages > 1" class="mt-2 flex items-center justify-between text-xs">
+          <button
+            type="button"
+            class="border-line rounded-sm border px-2 py-1 disabled:opacity-40"
+            :disabled="relics.page <= 1 || relicsPending"
+            @click="emit('relicPage', relics.page - 1)"
+          >
+            {{ t('places.prev') }}
+          </button>
+          <span class="text-muted">{{ relics.page }} / {{ relics.totalPages }}</span>
+          <button
+            type="button"
+            class="border-line rounded-sm border px-2 py-1 disabled:opacity-40"
+            :disabled="relics.page >= relics.totalPages || relicsPending"
+            @click="emit('relicPage', relics.page + 1)"
+          >
+            {{ t('places.next') }}
+          </button>
+        </div>
+      </template>
+    </section>
 
     <ul ref="scroller" class="min-h-0 flex-1 overflow-y-auto" @scroll.passive="onScroll">
       <li v-if="items.length === 0" class="text-muted px-4 py-6 text-sm">
