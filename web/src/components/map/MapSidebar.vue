@@ -32,12 +32,20 @@ const props = defineProps<{
   relicsPending: boolean;
   relicsError: string | null;
   museums: PlaceSummary[];
+  relicQuery: string;
 }>();
 
 const emit = defineEmits<{
   select: [place: PlaceSummary];
+  relicSearch: [name: string];
   relicPage: [page: number];
 }>();
+
+const relicQueryInput = ref('');
+
+function submitRelicSearch(): void {
+  emit('relicSearch', relicQueryInput.value);
+}
 
 function compactName(value: string): string {
   return value.normalize('NFKC').replace(/\s+/g, '');
@@ -171,14 +179,34 @@ onBeforeUnmount(() => {
           </button>
         </div>
       </div>
+
+      <form class="border-line space-y-2 border-t pt-3" @submit.prevent="submitRelicSearch">
+        <p class="text-sm font-semibold">{{ t('map.relicsTitle') }}</p>
+        <div class="flex gap-1">
+          <label class="sr-only" for="relic-search">{{ t('map.relicsTitle') }}</label>
+          <input
+            id="relic-search"
+            v-model="relicQueryInput"
+            type="search"
+            class="border-line placeholder:text-muted focus:border-ink min-w-0 flex-1 rounded-sm border bg-white px-3 py-2 text-sm outline-none"
+            :placeholder="t('map.relicsSearchPlaceholder')"
+          />
+          <button
+            type="submit"
+            class="bg-ink text-paper hover:bg-ink/90 shrink-0 rounded-sm px-3 py-2 text-sm"
+          >
+            {{ t('places.search') }}
+          </button>
+        </div>
+      </form>
     </div>
 
     <p class="text-muted shrink-0 px-4 py-2 text-xs">
       {{ t('map.showingCount', { n: count }) }}
     </p>
 
-    <section v-if="searching" class="border-line shrink-0 border-b px-4 py-3">
-      <h2 class="text-sm font-semibold">{{ t('map.relicsTitle') }}</h2>
+    <section v-if="relicQuery" class="border-line shrink-0 border-b px-4 py-3">
+      <h2 class="sr-only">{{ t('map.relicsTitle') }}</h2>
       <p v-if="relicsPending && !relics" class="text-muted mt-2 text-xs">
         {{ t('map.relicsLoading') }}
       </p>
