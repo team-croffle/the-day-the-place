@@ -13,6 +13,8 @@ export interface Exhibition {
   placeSource: string | null;
   placeId: string | null;
   placeName: string;
+  /** 주최 기관을 장소 주소와 맞춘 시도코드. 없으면 이름에서만 읽는다. */
+  region?: string | null;
   summary: string;
   imageUrl: string | null;
   sourceUrl: string | null;

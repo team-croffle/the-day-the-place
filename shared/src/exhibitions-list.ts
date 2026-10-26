@@ -1,7 +1,25 @@
-import { placeAddressInRegion } from './constants/place-categories';
+import { heritageSidoFromAddress, placeAddressInRegion } from './constants/place-categories';
 import type { Exhibition, ExhibitionListQuery, ExhibitionStatus } from './types/exhibition';
 
 const MAP_PLACE = /박물관|기념관|전시관/;
+
+/** 장소 목록에서 주최 기관을 찾을 때 쓰는 최소 정보. */
+export interface ExhibitionVenue {
+  source: string;
+  id: string;
+  name: string;
+  address: string;
+}
+
+/** 장소 ID가 같거나, 기관명이 하나만 맞으면 그 주소의 시도코드. 아니면 이름에서 읽는다. */
+export function exhibitionRegion(
+  row: Pick<Exhibition, 'placeSource' | 'placeId' | 'placeName'>,
+  venues: readonly ExhibitionVenue[],
+): string | null {
+  const venue = findVenue(row, venues);
+  const fromAddress = heritageSidoFromAddress(venue?.address ?? '');
+  return fromAddress ?? heritageSidoFromAddress(row.placeName) ?? null;
+}
 
 /** 지도에 올리는 박물관·기념관·전시관. 대학원·갤러리·미술관은 빠진다. */
 export function isExhibitionPlace(placeName: string): boolean {
@@ -23,7 +41,7 @@ export function selectExhibitions(
       .filter((row) => row.endsOn >= today && isExhibitionPlace(row.placeName)),
   )
     .filter((row) => (query.status ? row.status === query.status : true))
-    .filter((row) => (region ? placeAddressInRegion(row.placeName, region) : true))
+    .filter((row) => (region ? exhibitionInRegion(row, region) : true))
     .filter((row) => {
       if (!query.placeSource && !query.placeId) {
         return true;
@@ -40,6 +58,40 @@ export function selectExhibitions(
 }
 
 /** 저장된 상태와 관계없이 시작일과 오늘로 예정·진행을 가른다. 시작일이 없으면 진행이다. */
+function exhibitionInRegion(row: Exhibition, code: string): boolean {
+  if (row.region !== undefined) {
+    return row.region === code;
+  }
+  return placeAddressInRegion(row.placeName, code);
+}
+
+function findVenue(
+  row: Pick<Exhibition, 'placeSource' | 'placeId' | 'placeName'>,
+  venues: readonly ExhibitionVenue[],
+): ExhibitionVenue | null {
+  if (row.placeSource && row.placeId) {
+    const byId = venues.find(
+      (venue) => venue.source === row.placeSource && venue.id === row.placeId,
+    );
+    if (byId) {
+      return byId;
+    }
+  }
+  const named = venues.filter((venue) => fold(venue.name) === fold(row.placeName));
+  if (named.length === 1) {
+    return named[0] ?? null;
+  }
+  if (named.length > 1) {
+    const codes = new Set(
+      named.map((venue) => heritageSidoFromAddress(venue.address)).filter((code) => code),
+    );
+    if (codes.size === 1) {
+      return named[0] ?? null;
+    }
+  }
+  return null;
+}
+
 function withStatusOn(row: Exhibition, today: string): Exhibition {
   const status: ExhibitionStatus = row.startsOn && today < row.startsOn ? 'upcoming' : 'ongoing';
   return status === row.status ? row : { ...row, status };

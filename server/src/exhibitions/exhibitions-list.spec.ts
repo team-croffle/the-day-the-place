@@ -1,4 +1,4 @@
-import { selectExhibitions, type Exhibition } from '@nest-vue/shared';
+import { exhibitionRegion, selectExhibitions, type Exhibition } from '@nest-vue/shared';
 
 const TODAY = '2026-10-07';
 
@@ -122,6 +122,28 @@ describe('selectExhibitions', () => {
       TODAY,
     );
     expect(kept.map((item) => item.id)).toEqual(['long']);
+  });
+
+  it('matches the host museum address when the name has no region', () => {
+    const central = row({
+      placeName: '국립중앙박물관',
+      placeSource: null,
+      placeId: null,
+    });
+    const region = exhibitionRegion(central, [
+      {
+        source: 'tour',
+        id: '126207',
+        name: '국립중앙박물관',
+        address: '서울특별시 용산구 서빙고로 137',
+      },
+    ]);
+
+    expect(region).toBe('11');
+    expect(
+      selectExhibitions([{ ...central, region }], { region: '11' }, TODAY).map((item) => item.id),
+    ).toEqual(['1']);
+    expect(selectExhibitions([{ ...central, region }], { region: '37' }, TODAY)).toEqual([]);
   });
 
   it('drops a venue that is not a museum, memorial, or exhibition hall', () => {

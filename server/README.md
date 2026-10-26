@@ -100,4 +100,4 @@ pnpm --filter @nest-vue/server test:e2e   # e2e (test/**/*.e2e-spec.ts)
 | GET    | `/api/collector/cursor`                       | 출처별 마지막 글 번호. 비밀 헤더 필요                 |
 | POST   | `/api/collector/ingest`                       | 전시 JSON 저장과 종료분 삭제. 비밀 헤더 필요          |
 
-커서의 글 번호는 아직 코드에 없다. 계약은 `docs/ARCHITECTURE.ko.md`다.
+커서는 `museumOr`, `museumnews` 글 번호다. 기록이 없으면 `0`이다.

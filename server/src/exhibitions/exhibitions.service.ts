@@ -1,10 +1,18 @@
-import { selectExhibitions, type Exhibition, type ExhibitionListQuery } from '@nest-vue/shared';
+import {
+  exhibitionRegion,
+  KOREA_PLACES_BBOX,
+  selectExhibitions,
+  type Exhibition,
+  type ExhibitionListQuery,
+  type ExhibitionVenue,
+} from '@nest-vue/shared';
 import { Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
 import { DRIZZLE } from '../database/database.constants';
 import type { DrizzleDb } from '../database/database.module';
 import { type ExhibitionRow, exhibitions } from '../database/schema';
+import { TourAdapter } from '../places/adapters/tour.adapter';
 import { fetchCultureExhibitions, omitRowsCoveredByCulture } from './culture-exhibitions';
 
 const CULTURE_TTL_MS = 10 * 60 * 1000;
@@ -18,6 +26,7 @@ export class ExhibitionsService {
   constructor(
     @Inject(DRIZZLE) private readonly db: DrizzleDb,
     private readonly config: ConfigService,
+    private readonly tour: TourAdapter,
   ) {}
 
   async list(query: ExhibitionListQuery): Promise<Exhibition[]> {
@@ -37,7 +46,26 @@ export class ExhibitionsService {
   private async load(): Promise<Exhibition[]> {
     const stored = (await this.db.select().from(exhibitions)).map(toExhibition);
     const culture = await this.cultureRows();
-    return [...omitRowsCoveredByCulture(stored, culture), ...culture];
+    const venues = await this.venues();
+    return [...omitRowsCoveredByCulture(stored, culture), ...culture].map((row) =>
+      Object.assign(row, { region: exhibitionRegion(row, venues) }),
+    );
+  }
+
+  private async venues(): Promise<ExhibitionVenue[]> {
+    try {
+      const places = await this.tour.listByBbox(KOREA_PLACES_BBOX);
+      return places.map((place) => ({
+        source: place.source,
+        id: place.id,
+        name: place.name,
+        address: place.address,
+      }));
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : 'unknown';
+      this.logger.warn(`장소 목록 조회 실패: ${reason}`);
+      return [];
+    }
   }
 
   private cultureRows(): Promise<Exhibition[]> {
