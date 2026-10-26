@@ -5,9 +5,12 @@ import {
   IsArray,
   IsDateString,
   IsIn,
+  IsInt,
   IsOptional,
   IsString,
+  IsUrl,
   MaxLength,
+  Min,
   ValidateNested,
 } from 'class-validator';
 
@@ -56,16 +59,35 @@ export class IngestDraftDto {
 }
 
 export class IngestCursorDto {
-  @IsDateString()
-  seenThrough: string;
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  museumOr?: number;
 
   @IsOptional()
-  @IsDateString()
-  resumeBefore?: string | null;
+  @IsInt()
+  @Min(0)
+  museumnews?: number;
+}
 
-  @IsOptional()
+export class PendingPostDto {
+  @IsIn(['museum_or', 'museumnews'])
+  source: 'museum_or' | 'museumnews';
+
+  @IsInt()
+  @Min(0)
+  postId: number;
+
+  @IsString()
+  @MaxLength(500)
+  title: string;
+
+  @IsUrl({ require_tld: false })
+  @MaxLength(2000)
+  url: string;
+
   @IsDateString()
-  unseenFrom?: string | null;
+  publishedOn: string;
 }
 
 export class IngestExhibitionsDto {
@@ -79,4 +101,12 @@ export class IngestExhibitionsDto {
   @ValidateNested()
   @Type(() => IngestCursorDto)
   cursor?: IngestCursorDto | null;
+
+  /** 있으면 못 보낸 글 목록을 이 값으로 바꾼다. 빈 배열은 비운다. */
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(2000)
+  @ValidateNested({ each: true })
+  @Type(() => PendingPostDto)
+  pending?: PendingPostDto[] | null;
 }

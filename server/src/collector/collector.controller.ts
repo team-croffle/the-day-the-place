@@ -11,7 +11,7 @@ export class CollectorController {
   constructor(private readonly collector: CollectorService) {}
 
   @Get('cursor')
-  async cursor(): Promise<ApiResponse<CollectorCursor | null>> {
+  async cursor(): Promise<ApiResponse<CollectorCursor>> {
     return { data: await this.collector.readCursor() };
   }
 

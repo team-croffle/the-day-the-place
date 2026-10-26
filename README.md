@@ -51,7 +51,7 @@ pnpm dev                          # server(3000) + web(5173) 동시 실행
 - Web: http://localhost:5173 (`/api` 는 vite proxy 로 server 에 전달)
 - Adminer: http://localhost:8080 (server: `postgres`, user/pass: `postgres`)
 
-수집기 구현은 이 브랜치에 없다. 계약은 [collector/README.md](collector/README.md)다. 이전 구현은 `archive/yonhap-collector`에 있다.
+수집기 계약과 실행은 [collector/README.md](collector/README.md)다.
 
 ## 자주 쓰는 명령
 

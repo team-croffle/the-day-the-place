@@ -36,6 +36,20 @@
       "when": 1791984067277,
       "tag": "0004_gray_mockingbird",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1792946231769,
+      "tag": "0005_collect_cursors",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1793028672749,
+      "tag": "0006_collect_pending",
+      "breakpoints": true
     }
   ]
 }
