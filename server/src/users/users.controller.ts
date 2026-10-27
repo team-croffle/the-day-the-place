@@ -11,10 +11,12 @@ import {
   Patch,
   Post,
   Query,
+  Req,
+  UnauthorizedException,
   UseGuards,
 } from '@nestjs/common';
 
-import { AdminSessionGuard } from '../auth/admin-session.guard';
+import { type AdminRequest, AdminSessionGuard } from '../auth/admin-session.guard';
 import { CreateUserDto } from './dto/create-user.dto';
 import { ListUsersQuery } from './dto/list-users.query';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -42,15 +44,24 @@ export class UsersController {
 
   @Patch(':id')
   async update(
+    @Req() request: AdminRequest,
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateUserDto,
   ): Promise<ApiResponse<User>> {
-    return { data: await this.usersService.update(id, dto) };
+    return { data: await this.usersService.update(actorId(request), id, dto) };
   }
 
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  async remove(@Param('id', ParseUUIDPipe) id: string): Promise<void> {
-    await this.usersService.remove(id);
+  async remove(
+    @Req() request: AdminRequest,
+    @Param('id', ParseUUIDPipe) id: string,
+  ): Promise<void> {
+    await this.usersService.remove(actorId(request), id);
   }
+}
+
+function actorId(request: AdminRequest): string {
+  if (!request.adminUserId) throw new UnauthorizedException();
+  return request.adminUserId;
 }

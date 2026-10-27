@@ -40,6 +40,10 @@ VITE_KAKAO_MAP_KEY=
 - `src/routes/sites/index.vue` → `/sites`
 - `src/routes/exhibitions/index.vue` → `/exhibitions`
 - `src/routes/login.vue` → `/login`, `src/routes/signup.vue` → `/signup`
+- `src/routes/me.vue` → `/me`
+- `src/routes/admin.vue` → `/admin`. 관리자만. 회원 역할과 수집 상태
+- `src/routes/forgot-password/index.vue` → `/forgot-password`
+- `src/routes/reset-password/index.vue` → `/reset-password`
 - `src/routes/about.vue` → `/about`
 - `[id].vue` → 동적 파라미터, `[...path].vue` → catch-all
 - 타입 정의는 `src/typed-router.d.ts` 로 자동 생성된다 (git ignore 대상)

@@ -19,6 +19,8 @@ export const API_ROUTES = {
   PLACES_SEARCH: 'places/search',
   EXHIBITIONS: 'exhibitions',
   AUTH: 'auth',
+  USERS: 'users',
+  ADMIN_COLLECTOR: 'admin/collector',
   FAVORITES: 'favorites',
   COMMENTS: 'comments',
   NOTIFICATIONS: 'notifications',
