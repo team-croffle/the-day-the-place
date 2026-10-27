@@ -20,8 +20,9 @@ export function apiUrl(path: string): string {
 /** ApiResponse<T> 봉투를 벗겨 T 만 돌려주는 fetch 래퍼 */
 export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`${BASE_URL}${path}`, {
-    headers: { 'Content-Type': 'application/json', ...init?.headers },
     ...init,
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json', ...init?.headers },
   });
 
   if (!response.ok) {
@@ -32,6 +33,8 @@ export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> 
 
     throw new ApiError(response.status, message);
   }
+
+  if (response.status === 204) return undefined as T;
 
   const payload = (await response.json()) as ApiResponse<T>;
   return payload.data;

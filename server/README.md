@@ -85,23 +85,24 @@ pnpm --filter @nest-vue/server test:e2e   # e2e (test/**/*.e2e-spec.ts)
 
 ## API
 
-| 메서드 | 경로                                          | 설명                                                  |
-| ------ | --------------------------------------------- | ----------------------------------------------------- |
-| GET    | `/api/health`                                 | 헬스체크                                              |
-| GET    | `/api/places/map?swLat=&swLng=&neLat=&neLng=` | 지도 bbox. Tour만. 실패는 `tour.items: null`          |
-| GET    | `/api/users?page=&size=`                      | 사용자 목록. 관리자 세션 필요                         |
-| GET    | `/api/users/:id`                              | 단건 조회. 관리자 세션 필요                           |
-| POST   | `/api/users`                                  | 생성. 역할은 member. 관리자 세션 필요                 |
-| PATCH  | `/api/users/:id`                              | 수정. 역할 변경은 관리자 세션만                       |
-| DELETE | `/api/users/:id`                              | 삭제. 관리자 세션 필요                                |
-| GET    | `/api/exhibitions`                            | 전시 목록. 저장분과 전시정보(통합)을 합친다           |
-| GET    | `/api/exhibitions/:id`                        | 전시 한 건                                            |
-| GET    | `/api/places/relics?q=&page=`                 | 기관을 모르는 소장품 이름 검색. 소장 기관을 같이 준다 |
-| GET    | `/api/places/relics/:relicId/image`           | 그 검색 결과의 이미지. 원천 주소는 주지 않는다        |
-| GET    | `/api/places/tour/:id/relics?page=&q=`        | 그 박물관의 e뮤지엄 소장품. 이름 검색과 페이지        |
-| GET    | `/api/places/tour/:id/relics/:relicId`        | 소장품 한 점. 시대·재질                               |
-| GET    | `/api/places/tour/:id/relics/:relicId/image`  | 소장품 이미지. 원천 주소는 브라우저에 주지 않는다     |
-| GET    | `/api/collector/cursor`                       | 출처별 마지막 글 번호. 비밀 헤더 필요                 |
-| POST   | `/api/collector/ingest`                       | 전시 JSON 저장과 종료분 삭제. 비밀 헤더 필요          |
+| 메서드 | 경로                                          | 설명                                                                                      |
+| ------ | --------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| GET    | `/api/health`                                 | 헬스체크                                                                                  |
+| GET    | `/api/places/map?swLat=&swLng=&neLat=&neLng=` | 지도 bbox. Tour만. 실패는 `tour.items: null`                                              |
+| GET    | `/api/users?page=&size=`                      | 사용자 목록. 관리자 세션 필요                                                             |
+| GET    | `/api/users/:id`                              | 단건 조회. 관리자 세션 필요                                                               |
+| POST   | `/api/users`                                  | 생성. 역할은 member. 관리자 세션 필요. 관리 화면은 쓰지 않고, 계정은 회원가입으로 만든다  |
+| PATCH  | `/api/users/:id`                              | 수정. 역할 변경은 관리자 세션만. 자기 역할과 마지막 관리자는 내리지 않는다                |
+| DELETE | `/api/users/:id`                              | 삭제. 관리자 세션 필요. 자기 계정과 마지막 관리자는 지우지 않는다                         |
+| GET    | `/api/admin/collector`                        | 수집 상태. 마지막 글 번호, 대기 글 수, 전시 수. 관리자 세션. 글 본문과 비밀은 주지 않는다 |
+| GET    | `/api/exhibitions`                            | 전시 목록. 저장분과 전시정보(통합)을 합친다                                               |
+| GET    | `/api/exhibitions/:id`                        | 전시 한 건                                                                                |
+| GET    | `/api/places/relics?q=&page=`                 | 기관을 모르는 소장품 이름 검색. 소장 기관을 같이 준다                                     |
+| GET    | `/api/places/relics/:relicId/image`           | 그 검색 결과의 이미지. 원천 주소는 주지 않는다                                            |
+| GET    | `/api/places/tour/:id/relics?page=&q=`        | 그 박물관의 e뮤지엄 소장품. 이름 검색과 페이지                                            |
+| GET    | `/api/places/tour/:id/relics/:relicId`        | 소장품 한 점. 시대·재질                                                                   |
+| GET    | `/api/places/tour/:id/relics/:relicId/image`  | 소장품 이미지. 원천 주소는 브라우저에 주지 않는다                                         |
+| GET    | `/api/collector/cursor`                       | 출처별 마지막 글 번호. 비밀 헤더 필요                                                     |
+| POST   | `/api/collector/ingest`                       | 전시 JSON 저장과 종료분 삭제. 비밀 헤더 필요                                              |
 
 커서는 `museumOr`, `museumnews` 글 번호다. 기록이 없으면 `0`이다.

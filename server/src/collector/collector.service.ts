@@ -1,7 +1,7 @@
-import { sameExhibitionName } from '@nest-vue/shared';
+import { sameExhibitionName, type CollectorStatus } from '@nest-vue/shared';
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { eq, inArray, sql } from 'drizzle-orm';
+import { count as sqlCount, eq, inArray, sql } from 'drizzle-orm';
 
 import { DRIZZLE } from '../database/database.constants';
 import type { DrizzleDb } from '../database/database.module';
@@ -15,6 +15,7 @@ import {
   forwardPostId,
   pendingFromRows,
 } from './collector-cursor';
+import { collectorStatus } from './collector-status';
 import type { IngestDraftDto, IngestExhibitionsDto } from './dto/ingest-exhibitions.dto';
 
 export type { CollectorCursor };
@@ -34,6 +35,24 @@ export class CollectorService {
       this.db.select().from(collectPending),
     ]);
     return { ...cursorFromRows(rows), pending: pendingFromRows(pending) };
+  }
+
+  /** 관리 화면용 숫자. 대기 글의 제목·주소와 수집 비밀은 읽지 않는다. */
+  async readStatus(): Promise<CollectorStatus> {
+    const [rows, pendingRows, exhibitionRows] = await Promise.all([
+      this.db
+        .select({ source: collectCursors.source, lastPostId: collectCursors.lastPostId })
+        .from(collectCursors),
+      this.db.select({ value: sqlCount() }).from(collectPending),
+      this.db.select({ value: sqlCount() }).from(exhibitions),
+    ]);
+    const cursor = cursorFromRows(rows);
+    return collectorStatus({
+      museumOr: cursor.museumOr,
+      museumnews: cursor.museumnews,
+      pendingCount: Number(pendingRows[0]?.value ?? 0),
+      exhibitionCount: Number(exhibitionRows[0]?.value ?? 0),
+    });
   }
 
   /** 전시 초안을 넣고 종료된 행을 지운다. 커서가 있으면 그 글 번호도 남긴다. */

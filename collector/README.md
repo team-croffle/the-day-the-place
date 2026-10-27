@@ -89,7 +89,7 @@ pnpm test:py
 
 ### 1. 마지막으로 본 글을 읽는다
 
-`DRY_RUN`이 아니면 `GET /api/collector/cursor`로 출처마다 마지막으로 본 글 번호와, Gemini에 못 보낸 글 목록을 읽는다. 응답 `data`는 `{ museumOr, museumnews, pending }`이고, 기록이 없으면 번호는 `0`, 목록은 빈 배열이다. 헤더는 `X-Collector-Secret`이다. `DRY_RUN=true`는 이 기록을 읽지도 쓰지도 않는다.
+`DRY_RUN`이 아니면 `GET /api/collector/cursor`로 출처마다 마지막으로 본 글 번호와, Gemini에 못 보낸 글 목록을 읽는다. 응답 `data`는 `{ museumOr, museumnews, pending }`이고, 기록이 없으면 번호는 `0`, 목록은 빈 배열이다. 헤더는 `X-Collector-Secret`이다. `DRY_RUN=true`는 이 기록을 읽지도 쓰지도 않는다. 관리 화면의 `GET /api/admin/collector`는 이 경로와 따로다. 그 응답은 글 번호와 건수만 주고, 대기 글 목록과 비밀은 주지 않으며, 커서를 바꾸지 않는다.
 
 ### 2. 새 글만 연다
 

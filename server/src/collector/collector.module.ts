@@ -7,5 +7,6 @@ import { CollectorService } from './collector.service';
 @Module({
   controllers: [CollectorController],
   providers: [CollectorService, CollectorSecretGuard],
+  exports: [CollectorService],
 })
 export class CollectorModule {}
