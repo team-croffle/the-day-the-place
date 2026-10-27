@@ -38,6 +38,10 @@ services:
       CULTURE_API_KEY: ${CULTURE_API_KEY:-}
       EMUSEUM_SERVICE_KEY: ${EMUSEUM_SERVICE_KEY:-}
       COLLECTOR_INGEST_SECRET: ${COLLECTOR_INGEST_SECRET:-}
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:-}
+      BETTER_AUTH_URL: ${BETTER_AUTH_URL:-}
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      RESEND_FROM: ${RESEND_FROM:-onboarding@resend.dev}
       DATABASE_URL: >-
         postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-nest_vue}
     ports:

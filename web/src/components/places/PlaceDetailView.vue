@@ -15,6 +15,7 @@ import { RouterLink } from 'vue-router';
 
 import ExhibitionCard from '@/components/exhibitions/ExhibitionCard.vue';
 import { ApiError, apiFetch, apiUrl } from '@/composables/useApi';
+import { authClient } from '@/lib/authClient';
 
 const props = defineProps<{
   kind: PlaceKind;
@@ -24,6 +25,7 @@ const props = defineProps<{
 }>();
 
 const { t, locale } = useI18n();
+const session = authClient.useSession();
 
 const place = ref<PlaceDetail | null>(null);
 const exhibitions = ref<Exhibition[]>([]);
@@ -284,9 +286,20 @@ watch(
             </button>
           </div>
           <div class="flex gap-2 text-sm">
-            <RouterLink to="/login" class="border-line rounded-sm border px-3 py-1.5">
-              {{ t('places.save') }}
+            <RouterLink
+              v-if="!session.isPending && !session.data"
+              to="/login"
+              class="border-line rounded-sm border px-3 py-1.5"
+            >
+              {{ t('places.favorite') }}
             </RouterLink>
+            <button
+              v-else-if="session.data"
+              type="button"
+              class="border-line rounded-sm border px-3 py-1.5"
+            >
+              {{ t('places.favorite') }}
+            </button>
             <a
               :href="directionsUrl"
               target="_blank"

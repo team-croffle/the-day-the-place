@@ -1,5 +1,5 @@
 import { USER_ROLES } from '@nest-vue/shared';
-import { pgEnum, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
+import { boolean, pgEnum, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
 
 export const userRoleEnum = pgEnum('user_role', USER_ROLES);
 
@@ -8,6 +8,8 @@ export const users = pgTable('users', {
   email: text().notNull().unique(),
   name: text().notNull(),
   role: userRoleEnum().notNull().default('member'),
+  emailVerified: boolean().notNull().default(false),
+  image: text(),
   createdAt: timestamp({ withTimezone: true, mode: 'date' }).notNull().defaultNow(),
   updatedAt: timestamp({ withTimezone: true, mode: 'date' })
     .notNull()

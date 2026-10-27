@@ -1,6 +1,17 @@
-import type { UpdateUserPayload } from '@nest-vue/shared';
-import { PartialType } from '@nestjs/mapped-types';
+import { USER_ROLES, type UpdateUserPayload, type UserRole } from '@nest-vue/shared';
+import { IsEmail, IsIn, IsOptional, IsString, Length } from 'class-validator';
 
-import { CreateUserDto } from './create-user.dto';
+export class UpdateUserDto implements UpdateUserPayload {
+  @IsOptional()
+  @IsEmail()
+  email?: string;
 
-export class UpdateUserDto extends PartialType(CreateUserDto) implements UpdateUserPayload {}
+  @IsOptional()
+  @IsString()
+  @Length(1, 60)
+  name?: string;
+
+  @IsOptional()
+  @IsIn(USER_ROLES)
+  role?: UserRole;
+}

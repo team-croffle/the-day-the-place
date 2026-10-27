@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 
+import { AuthModule } from './auth/auth.module';
 import { CollectorModule } from './collector/collector.module';
 import { DatabaseModule } from './database/database.module';
 import { ExhibitionsModule } from './exhibitions/exhibitions.module';
@@ -17,6 +18,7 @@ import { UsersModule } from './users/users.module';
       expandVariables: true,
     }),
     DatabaseModule,
+    AuthModule,
     HealthModule,
     PlacesModule,
     ExhibitionsModule,

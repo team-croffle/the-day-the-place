@@ -11,11 +11,15 @@ export interface User {
   updatedAt: string;
 }
 
-/** 사용자 생성 페이로드 (server DTO / web form 공용) */
+/** 사용자 생성 페이로드. 역할은 받지 않고 가입은 member 다. */
 export interface CreateUserPayload {
   email: string;
   name: string;
-  role?: UserRole;
 }
 
-export type UpdateUserPayload = Partial<CreateUserPayload>;
+/** 역할 변경은 관리자 세션의 수정에서만 받는다. */
+export interface UpdateUserPayload {
+  email?: string;
+  name?: string;
+  role?: UserRole;
+}

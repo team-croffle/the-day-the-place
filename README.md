@@ -8,7 +8,7 @@
 ```
 .
 ├── web/         Vue 3 + Vite + Tailwind v4        → 화면
-├── server/      NestJS 12 + Drizzle ORM           → API, 원천 프록시, 회원, SSE
+├── server/      NestJS 12 + Drizzle ORM + Better Auth → API, 원천 프록시, 회원 세션
 ├── shared/      공용 타입·인터페이스·상수           → server / web 이 소스로 직접 참조
 ├── collector/   Python (uv) 협회 글 특별전 수집기   → Modal (폴백: GCP Cloud Run Job)
 └── docker/      Nest 이미지 빌드 + compose (prod / dev)

@@ -43,7 +43,7 @@ export class UsersService {
   async create(payload: CreateUserPayload): Promise<User> {
     const [row] = await this.db
       .insert(users)
-      .values({ email: payload.email, name: payload.name, role: payload.role ?? 'member' })
+      .values({ email: payload.email, name: payload.name, role: 'member' })
       .returning();
 
     return toUser(row!);
