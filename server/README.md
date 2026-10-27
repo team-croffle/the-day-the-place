@@ -1,6 +1,6 @@
 # @nest-vue/server
 
-NestJS 12 + Drizzle ORM(PostgreSQL) 기반 API 서버.
+NestJS 12 + Drizzle ORM(PostgreSQL) 기반 API 서버. 로그인은 Better Auth의 이메일 세션이다.
 
 ## 실행
 
@@ -23,20 +23,24 @@ pnpm docker:dev
 
 `server/.env` 를 직접 만들고 아래 값을 채운다. 예시 파일은 없다.
 
-| 변수                      | 필수 | 기본값                                        | 설명                                           |
-| ------------------------- | ---- | --------------------------------------------- | ---------------------------------------------- |
-| `DATABASE_URL`            | O    | -                                             | `postgresql://user:pass@host:5432/db`          |
-| `PORT`                    | X    | `3000`                                        | HTTP 포트                                      |
-| `CORS_ORIGIN`             | X    | `*`                                           | 허용 오리진                                    |
-| `DATABASE_POOL_MAX`       | X    | `10`                                          | pg 커넥션 풀 최대 크기                         |
-| `NODE_ENV`                | X    | -                                             | `development` / `production`                   |
-| `TOUR_API_KEY`            | O    | -                                             | 한국관광공사 TourAPI (v0.1)                    |
-| `TOUR_API_BASE_URL`       | X    | `https://apis.data.go.kr/B551011/KorService2` | TourAPI 베이스 URL                             |
-| `HERITAGE_API_BASE_URL`   | X    | -                                             | 국가유산청 API 베이스 (v0.2 상세)              |
-| `HERITAGE_API_KEY`        | X    | -                                             | 국가유산청이 키를 요구하면 추가                |
-| `CULTURE_API_KEY`         | 전시 | -                                             | 전시정보(통합). 화면이 요청할 때 읽는다        |
-| `EMUSEUM_SERVICE_KEY`     | 소장 | -                                             | e뮤지엄 소장품. 박물관 상세가 요청할 때 읽는다 |
-| `COLLECTOR_INGEST_SECRET` | 수집 | -                                             | 수집 API 비밀. 비어 있으면 거절한다            |
+| 변수                      | 필수 | 기본값                                        | 설명                                             |
+| ------------------------- | ---- | --------------------------------------------- | ------------------------------------------------ |
+| `DATABASE_URL`            | O    | -                                             | `postgresql://user:pass@host:5432/db`            |
+| `PORT`                    | X    | `3000`                                        | HTTP 포트                                        |
+| `CORS_ORIGIN`             | X    | `*`                                           | 허용 오리진                                      |
+| `DATABASE_POOL_MAX`       | X    | `10`                                          | pg 커넥션 풀 최대 크기                           |
+| `NODE_ENV`                | X    | -                                             | `development` / `production`                     |
+| `TOUR_API_KEY`            | O    | -                                             | 한국관광공사 TourAPI (v0.1)                      |
+| `TOUR_API_BASE_URL`       | X    | `https://apis.data.go.kr/B551011/KorService2` | TourAPI 베이스 URL                               |
+| `HERITAGE_API_BASE_URL`   | X    | -                                             | 국가유산청 API 베이스 (v0.2 상세)                |
+| `HERITAGE_API_KEY`        | X    | -                                             | 국가유산청이 키를 요구하면 추가                  |
+| `CULTURE_API_KEY`         | 전시 | -                                             | 전시정보(통합). 화면이 요청할 때 읽는다          |
+| `EMUSEUM_SERVICE_KEY`     | 소장 | -                                             | e뮤지엄 소장품. 박물관 상세가 요청할 때 읽는다   |
+| `COLLECTOR_INGEST_SECRET` | 수집 | -                                             | 수집 API 비밀. 비어 있으면 거절한다              |
+| `BETTER_AUTH_SECRET`      | O    | -                                             | 세션 서명 비밀. 없으면 서버가 뜨지 않는다        |
+| `BETTER_AUTH_URL`         | X    | `http://localhost:3000`                       | 인증 메일 링크에 쓰는 API 주소                   |
+| `RESEND_API_KEY`          | O    | -                                             | 인증·재설정 메일. 없으면 서버가 뜨지 않는다      |
+| `RESEND_FROM`             | X    | `onboarding@resend.dev`                       | 보내는 주소. 도메인 인증 전에는 시험 발송만 된다 |
 
 예시:
 
@@ -85,11 +89,11 @@ pnpm --filter @nest-vue/server test:e2e   # e2e (test/**/*.e2e-spec.ts)
 | ------ | --------------------------------------------- | ----------------------------------------------------- |
 | GET    | `/api/health`                                 | 헬스체크                                              |
 | GET    | `/api/places/map?swLat=&swLng=&neLat=&neLng=` | 지도 bbox. Tour만. 실패는 `tour.items: null`          |
-| GET    | `/api/users?page=&size=`                      | 사용자 목록(페이지네이션)                             |
-| GET    | `/api/users/:id`                              | 단건 조회                                             |
-| POST   | `/api/users`                                  | 생성                                                  |
-| PATCH  | `/api/users/:id`                              | 수정                                                  |
-| DELETE | `/api/users/:id`                              | 삭제                                                  |
+| GET    | `/api/users?page=&size=`                      | 사용자 목록. 관리자 세션 필요                         |
+| GET    | `/api/users/:id`                              | 단건 조회. 관리자 세션 필요                           |
+| POST   | `/api/users`                                  | 생성. 역할은 member. 관리자 세션 필요                 |
+| PATCH  | `/api/users/:id`                              | 수정. 역할 변경은 관리자 세션만                       |
+| DELETE | `/api/users/:id`                              | 삭제. 관리자 세션 필요                                |
 | GET    | `/api/exhibitions`                            | 전시 목록. 저장분과 전시정보(통합)을 합친다           |
 | GET    | `/api/exhibitions/:id`                        | 전시 한 건                                            |
 | GET    | `/api/places/relics?q=&page=`                 | 기관을 모르는 소장품 이름 검색. 소장 기관을 같이 준다 |

@@ -11,14 +11,17 @@ import {
   Patch,
   Post,
   Query,
+  UseGuards,
 } from '@nestjs/common';
 
+import { AdminSessionGuard } from '../auth/admin-session.guard';
 import { CreateUserDto } from './dto/create-user.dto';
 import { ListUsersQuery } from './dto/list-users.query';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { UsersService } from './users.service';
 
 @Controller('users')
+@UseGuards(AdminSessionGuard)
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
