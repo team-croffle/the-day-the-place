@@ -73,6 +73,8 @@
     "prev": "Previous",
     "next": "Next",
     "favorite": "Favorite",
+    "favoriteSaved": "Saved",
+    "favoriteCount": "{n} saved",
     "directionsCta": "Directions",
     "backToList": "Back to list",
     "notFound": "Place not found.",
@@ -195,7 +197,8 @@
     "tabVisits": "Visits and notes",
     "tabFavorites": "Favorites",
     "emptyVisits": "No visit notes yet.",
-    "emptyFavorites": "No favorite places yet."
+    "emptyFavorites": "No favorite places yet.",
+    "removeFavorite": "Remove"
   },
   "admin": {
     "home": "Home",

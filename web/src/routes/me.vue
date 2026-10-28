@@ -1,14 +1,15 @@
 <script setup lang="ts">
-import { MAP_REGION_CHIPS } from '@nest-vue/shared';
+import { API_ROUTES, MAP_REGION_CHIPS, type FavoriteItem } from '@nest-vue/shared';
 import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { RouterLink, useRouter } from 'vue-router';
 
+import { apiFetch } from '@/composables/useApi';
 import { authClient } from '@/lib/authClient';
+import { placeDetailPath } from '@/lib/placePath';
 
 const XP_TOTAL = 1000;
 const VISIT_COUNT = 0;
-const FAVORITE_COUNT = 0;
 const AVERAGE_RATING = 0;
 
 const { t, locale } = useI18n();
@@ -16,6 +17,8 @@ const router = useRouter();
 const session = authClient.useSession();
 
 const tab = ref<'visits' | 'favorites'>('visits');
+const favorites = ref<FavoriteItem[]>([]);
+const favoriteCount = computed(() => favorites.value.length);
 
 const regions = MAP_REGION_CHIPS.filter((chip) => chip.code !== 'all' && chip.code !== '39');
 const badges = ['badgeFirst', 'badgeFive', 'badgeSeoul', 'badgeHeritage', 'badgeFifty'] as const;
@@ -38,9 +41,32 @@ watch(
   () => [session.value.isPending, session.value.data] as const,
   ([pending, data]) => {
     if (!pending && !data) void router.replace('/login');
+    if (!pending && data) void loadFavorites();
   },
   { immediate: true },
 );
+
+async function loadFavorites(): Promise<void> {
+  try {
+    favorites.value = await apiFetch<FavoriteItem[]>(`/${API_ROUTES.FAVORITES}`);
+  } catch {
+    favorites.value = [];
+  }
+}
+
+async function removeFavorite(item: FavoriteItem): Promise<void> {
+  try {
+    await apiFetch<void>(
+      `/${API_ROUTES.FAVORITES}/${encodeURIComponent(item.source)}/${encodeURIComponent(item.placeId)}`,
+      { method: 'DELETE' },
+    );
+    favorites.value = favorites.value.filter(
+      (row) => row.source !== item.source || row.placeId !== item.placeId,
+    );
+  } catch {
+    return;
+  }
+}
 
 async function logout(): Promise<void> {
   await authClient.signOut();
@@ -114,7 +140,7 @@ async function logout(): Promise<void> {
             </div>
             <div class="me-stat">
               <p class="text-3xl leading-none font-semibold">
-                {{ t('me.placeCount', { count: FAVORITE_COUNT }) }}
+                {{ t('me.placeCount', { count: favoriteCount }) }}
               </p>
               <p class="text-muted mt-2 text-[11px]">{{ t('me.favorites') }}</p>
             </div>
@@ -170,12 +196,33 @@ async function logout(): Promise<void> {
             class="ml-1.5 inline-block min-w-4 px-1 text-center text-[10px] leading-4"
             :class="tab === 'favorites' ? 'bg-ink text-paper' : 'text-muted bg-[#ece7df]'"
           >
-            {{ FAVORITE_COUNT }}
+            {{ favoriteCount }}
           </span>
         </button>
       </div>
 
+      <ul
+        v-if="tab === 'favorites' && favorites.length > 0"
+        class="mt-4 divide-y divide-[#e6dfd2] bg-white shadow-[0_8px_24px_rgba(28,25,23,0.04)]"
+      >
+        <li
+          v-for="item in favorites"
+          :key="`${item.source}:${item.placeId}`"
+          class="flex items-center justify-between gap-4 px-6 py-4"
+        >
+          <RouterLink
+            :to="placeDetailPath(item.kind, item.placeId)"
+            class="min-w-0 truncate font-medium"
+          >
+            {{ item.name }}
+          </RouterLink>
+          <button type="button" class="text-muted shrink-0 text-sm" @click="removeFavorite(item)">
+            {{ t('me.removeFavorite') }}
+          </button>
+        </li>
+      </ul>
       <p
+        v-else
         class="text-muted mt-4 bg-white px-6 py-12 text-center text-sm shadow-[0_8px_24px_rgba(28,25,23,0.04)]"
       >
         {{ tab === 'visits' ? t('me.emptyVisits') : t('me.emptyFavorites') }}

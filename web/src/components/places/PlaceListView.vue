@@ -5,6 +5,7 @@ import { useI18n } from 'vue-i18n';
 import { RouterLink } from 'vue-router';
 
 import PlaceCard from '@/components/places/PlaceCard.vue';
+import { useFavoriteMarks, type FavoriteTargetView } from '@/composables/useFavoriteMarks';
 import { usePlaceList } from '@/composables/usePlaceList';
 
 const props = defineProps<{
@@ -16,6 +17,15 @@ const props = defineProps<{
 
 const { t } = useI18n();
 const { q, region, category, page, result, items, error, pending } = usePlaceList(props.kind);
+const favoriteTargets = computed<FavoriteTargetView[]>(() =>
+  items.value.map((place) => ({
+    source: place.source,
+    id: place.id,
+    name: place.name,
+    kind: place.kind,
+  })),
+);
+const favorites = useFavoriteMarks(favoriteTargets);
 
 const total = computed(() => result.value?.total ?? 0);
 const totalPages = computed(() => result.value?.totalPages ?? 0);
@@ -102,7 +112,15 @@ const totalPages = computed(() => result.value?.totalPages ?? 0);
       <p v-else-if="items.length === 0" class="text-muted mt-8 text-sm">{{ t('places.empty') }}</p>
       <ul v-else class="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <li v-for="place in items" :key="place.globalId">
-          <PlaceCard :place="place" />
+          <PlaceCard
+            :place="place"
+            :count="favorites.countOf(place.source, place.id)"
+            :saved="favorites.isSaved(place.source, place.id)"
+            :logged-in="Boolean(favorites.session.value.data)"
+            :session-pending="favorites.session.value.isPending"
+            :busy="favorites.isBusy(place.source, place.id)"
+            @toggle-favorite="favorites.toggle(place)"
+          />
         </li>
       </ul>
 
