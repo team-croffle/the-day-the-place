@@ -40,7 +40,7 @@ VITE_KAKAO_MAP_KEY=
 - `src/routes/sites/index.vue` → `/sites`
 - `src/routes/exhibitions/index.vue` → `/exhibitions`
 - `src/routes/login.vue` → `/login`, `src/routes/signup.vue` → `/signup`
-- `src/routes/me.vue` → `/me`
+- `src/routes/me.vue` → `/me`. 저장한 장소 목록
 - `src/routes/admin.vue` → `/admin`. 관리자만. 회원 역할과 수집 상태
 - `src/routes/forgot-password/index.vue` → `/forgot-password`
 - `src/routes/reset-password/index.vue` → `/reset-password`

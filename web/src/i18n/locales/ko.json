@@ -73,6 +73,8 @@
     "prev": "이전",
     "next": "다음",
     "favorite": "즐겨찾기",
+    "favoriteSaved": "저장됨",
+    "favoriteCount": "{n}명이 저장",
     "directionsCta": "길찾기",
     "backToList": "목록으로",
     "notFound": "장소를 찾지 못했습니다.",
@@ -195,7 +197,8 @@
     "tabVisits": "방문 기록·리뷰",
     "tabFavorites": "즐겨찾기",
     "emptyVisits": "아직 남긴 방문 기록이 없습니다.",
-    "emptyFavorites": "즐겨찾기한 장소가 없습니다."
+    "emptyFavorites": "즐겨찾기한 장소가 없습니다.",
+    "removeFavorite": "해제"
   },
   "admin": {
     "home": "홈",

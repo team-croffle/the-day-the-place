@@ -14,8 +14,9 @@ import { useI18n } from 'vue-i18n';
 import { RouterLink } from 'vue-router';
 
 import ExhibitionCard from '@/components/exhibitions/ExhibitionCard.vue';
+import FavoriteControl from '@/components/places/FavoriteControl.vue';
 import { ApiError, apiFetch, apiUrl } from '@/composables/useApi';
-import { authClient } from '@/lib/authClient';
+import { useFavoriteMarks } from '@/composables/useFavoriteMarks';
 
 const props = defineProps<{
   kind: PlaceKind;
@@ -25,9 +26,26 @@ const props = defineProps<{
 }>();
 
 const { t, locale } = useI18n();
-const session = authClient.useSession();
 
 const place = ref<PlaceDetail | null>(null);
+const favoriteTargets = computed(() => {
+  const current = place.value;
+  if (!current) return [];
+  return [
+    {
+      source: current.source,
+      id: current.id,
+      name: current.name,
+      kind: current.kind,
+    },
+  ];
+});
+const favorites = useFavoriteMarks(favoriteTargets);
+
+function toggleFavorite(): void {
+  const target = favoriteTargets.value[0];
+  if (target) void favorites.toggle(target);
+}
 const exhibitions = ref<Exhibition[]>([]);
 const exhibitionsError = ref<string | null>(null);
 const relics = ref<Paginated<RelicSummary> | null>(null);
@@ -286,20 +304,15 @@ watch(
             </button>
           </div>
           <div class="flex gap-2 text-sm">
-            <RouterLink
-              v-if="!session.isPending && !session.data"
-              to="/login"
-              class="border-line rounded-sm border px-3 py-1.5"
-            >
-              {{ t('places.favorite') }}
-            </RouterLink>
-            <button
-              v-else-if="session.data"
-              type="button"
-              class="border-line rounded-sm border px-3 py-1.5"
-            >
-              {{ t('places.favorite') }}
-            </button>
+            <FavoriteControl
+              v-if="place"
+              :count="favorites.countOf(place.source, place.id)"
+              :saved="favorites.isSaved(place.source, place.id)"
+              :logged-in="Boolean(favorites.session.value.data)"
+              :session-pending="favorites.session.value.isPending"
+              :busy="favorites.isBusy(place.source, place.id)"
+              @toggle="toggleFavorite"
+            />
             <a
               :href="directionsUrl"
               target="_blank"

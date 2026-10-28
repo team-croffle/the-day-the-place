@@ -57,6 +57,13 @@
       "when": 1793076037301,
       "tag": "0007_better_auth",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1793160994336,
+      "tag": "0008_flimsy_king_bedlam",
+      "breakpoints": true
     }
   ]
 }

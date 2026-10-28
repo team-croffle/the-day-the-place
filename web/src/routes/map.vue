@@ -18,6 +18,7 @@ import MapPreview from '@/components/map/MapPreview.vue';
 import MapSidebar from '@/components/map/MapSidebar.vue';
 import PlaceMarkers from '@/components/map/PlaceMarkers.vue';
 import { apiFetch } from '@/composables/useApi';
+import { useFavoriteMarks, type FavoriteTargetView } from '@/composables/useFavoriteMarks';
 import { resolveMapCenter, SEOUL_CENTER } from '@/composables/useGeolocation';
 import { useMapPlaces } from '@/composables/useMapPlaces';
 import { isKakaoMapsReady } from '@/lib/kakaoMap';
@@ -75,6 +76,18 @@ const nearbyPlaces = computed(() => {
   const pool = places.value.filter((place) => kinds.value[place.kind]);
   return nearestPlaces(origin, pool, 3);
 });
+
+const favoriteTargets = computed<FavoriteTargetView[]>(() => {
+  const place = selectedPlace.value;
+  if (!place) return [];
+  return [{ source: place.source, id: place.id, name: place.name, kind: place.kind }];
+});
+const favorites = useFavoriteMarks(favoriteTargets);
+
+function toggleSelectedFavorite(): void {
+  const target = favoriteTargets.value[0];
+  if (target) void favorites.toggle(target);
+}
 
 const relicQuery = ref('');
 const relicHits = ref<Paginated<RelicSearchHit> | null>(null);
@@ -301,8 +314,14 @@ function onClearSelect(): void {
         <MapPreview
           :place="selectedPlace"
           :nearby="nearbyPlaces"
+          :count="favorites.countOf(selectedPlace.source, selectedPlace.id)"
+          :saved="favorites.isSaved(selectedPlace.source, selectedPlace.id)"
+          :logged-in="Boolean(favorites.session.value.data)"
+          :session-pending="favorites.session.value.isPending"
+          :busy="favorites.isBusy(selectedPlace.source, selectedPlace.id)"
           @close="onClearSelect"
           @select="onSelectFromPin"
+          @toggle-favorite="toggleSelectedFavorite"
         />
       </div>
     </Transition>

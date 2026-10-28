@@ -4,6 +4,7 @@ export * from './constants/place-categories';
 export * from './types/api';
 export * from './types/collector-status';
 export * from './types/exhibition';
+export * from './types/favorite';
 export * from './types/health';
 export * from './types/place';
 export * from './types/relic';

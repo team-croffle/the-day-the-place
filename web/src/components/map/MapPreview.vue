@@ -4,16 +4,23 @@ import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { RouterLink } from 'vue-router';
 
+import FavoriteControl from '@/components/places/FavoriteControl.vue';
 import { placeDetailPath } from '@/lib/placePath';
 
 const props = defineProps<{
   place: PlaceSummary;
   nearby: PlaceSummary[];
+  count: number | null;
+  saved: boolean;
+  loggedIn: boolean;
+  sessionPending: boolean;
+  busy: boolean;
 }>();
 
 const emit = defineEmits<{
   close: [];
   select: [place: PlaceSummary];
+  toggleFavorite: [];
 }>();
 
 const { t, locale } = useI18n();
@@ -54,12 +61,22 @@ const kindText = computed(() => kindLabel(props.place.kind));
       <p v-if="place.summary" class="text-muted mt-3 text-sm leading-relaxed">
         {{ place.summary }}
       </p>
-      <RouterLink
-        :to="placeDetailPath(place.kind, place.id)"
-        class="bg-gold text-ink hover:bg-gold-hover mt-4 inline-flex rounded-sm px-3 py-1.5 text-sm"
-      >
-        {{ t('places.detailCta') }}
-      </RouterLink>
+      <div class="mt-4 flex flex-wrap items-center gap-2">
+        <FavoriteControl
+          :count="count"
+          :saved="saved"
+          :logged-in="loggedIn"
+          :session-pending="sessionPending"
+          :busy="busy"
+          @toggle="emit('toggleFavorite')"
+        />
+        <RouterLink
+          :to="placeDetailPath(place.kind, place.id)"
+          class="bg-gold text-ink hover:bg-gold-hover inline-flex rounded-sm px-3 py-1.5 text-sm"
+        >
+          {{ t('places.detailCta') }}
+        </RouterLink>
+      </div>
 
       <section v-if="nearby.length > 0" class="mt-6">
         <h3 class="text-sm font-semibold">{{ t('map.nearby') }}</h3>
