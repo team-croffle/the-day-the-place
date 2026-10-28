@@ -5,7 +5,7 @@ import { and, count as sqlCount, desc, eq, inArray } from 'drizzle-orm';
 import { DRIZZLE } from '../database/database.constants';
 import type { DrizzleDb } from '../database/database.module';
 import { favorites } from '../database/schema';
-import { fillFavoriteCounts, singleFavoriteId } from './favorite-summary';
+import { fillFavoriteCounts, parseFavoriteIdList, singleFavoriteId } from './favorite-summary';
 
 export interface SaveFavoriteInput {
   source: PlaceSource;
