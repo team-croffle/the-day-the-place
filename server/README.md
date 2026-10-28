@@ -95,10 +95,10 @@ pnpm --filter @nest-vue/server test:e2e   # e2e (test/**/*.e2e-spec.ts)
 | PATCH  | `/api/users/:id`                              | 수정. 역할 변경은 관리자 세션만. 자기 역할과 마지막 관리자는 내리지 않는다                |
 | DELETE | `/api/users/:id`                              | 삭제. 관리자 세션 필요. 자기 계정과 마지막 관리자는 지우지 않는다                         |
 | GET    | `/api/admin/collector`                        | 수집 상태. 마지막 글 번호, 대기 글 수, 전시 수. 관리자 세션. 글 본문과 비밀은 주지 않는다 |
-| GET    | `/api/favorites/summary?source=&ids=`         | 장소별 저장 수. 로그인 없이 본다. 세션이 있으면 그중 내가 저장한 ID도 준다                |
-| GET    | `/api/favorites`                              | 내가 저장한 장소. 이름과 종류. 회원 세션                                                  |
-| PUT    | `/api/favorites`                              | 저장. 같은 장소면 이름과 종류만 다시 적는다. 회원 세션                                    |
-| DELETE | `/api/favorites/:source/:placeId`             | 저장 해제. 회원 세션                                                                      |
+| GET    | `/api/favorites/summary?source=&ids=`         | 장소별 관심 수. 로그인 없이 본다. 세션이 있으면 그중 내가 관심등록한 ID도 준다            |
+| GET    | `/api/favorites`                              | 내가 관심등록한 장소. 이름과 종류. 회원 세션                                              |
+| PUT    | `/api/favorites`                              | 관심등록. 같은 장소면 이름과 종류만 다시 적는다. 회원 세션                                |
+| DELETE | `/api/favorites/:source/:placeId`             | 관심 해제. 회원 세션                                                                      |
 | GET    | `/api/exhibitions`                            | 전시 목록. 저장분과 전시정보(통합)을 합친다                                               |
 | GET    | `/api/exhibitions/:id`                        | 전시 한 건                                                                                |
 | GET    | `/api/places/relics?q=&page=`                 | 기관을 모르는 소장품 이름 검색. 소장 기관을 같이 준다                                     |
