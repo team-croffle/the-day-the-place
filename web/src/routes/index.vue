@@ -174,7 +174,7 @@ const eras = [
           v-if="featured?.imageUrl"
           :src="featured.imageUrl"
           alt=""
-          class="mb-1 hidden max-h-72 w-auto max-w-xs shrink-0 object-contain sm:block"
+          class="mb-1 hidden max-h-[26rem] w-auto max-w-md shrink-0 object-contain sm:block"
         />
       </div>
     </section>
