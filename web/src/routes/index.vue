@@ -108,72 +108,74 @@ const eras = [
       @focusin="holdHero"
       @focusout="releaseHero"
     >
-      <img
-        v-if="featured?.imageUrl"
-        :src="featured.imageUrl"
-        alt=""
-        class="absolute inset-0 h-full w-full object-cover object-top"
-      />
       <div
-        class="absolute inset-0"
-        :class="
-          featured?.imageUrl
-            ? 'from-ink via-ink/80 to-ink/25 bg-linear-to-r'
-            : 'from-ink via-ink/90 to-gold/30 bg-linear-to-br'
-        "
+        v-if="!featured?.imageUrl"
+        class="from-ink via-ink/90 to-gold/30 absolute inset-0 bg-linear-to-br"
         aria-hidden="true"
       />
       <div
-        class="relative mx-auto flex min-h-[28rem] max-w-6xl flex-col justify-end px-6 pt-16 pb-24"
+        class="relative mx-auto flex min-h-[28rem] max-w-6xl items-end justify-between gap-10 px-6 pt-16 pb-24"
       >
-        <p class="text-gold text-xs tracking-widest uppercase">
-          {{ featured ? t(`exhibitions.status.${featured.status}`) : t('home.heroEyebrow') }}
-        </p>
-        <h1 class="mt-3 max-w-xl text-3xl font-semibold sm:text-4xl">
-          {{ featured ? featured.title : t('home.heroTitle') }}
-        </h1>
-        <p class="text-paper/80 mt-3 max-w-lg text-sm">
-          {{ featured ? featured.summary : t('home.heroBody') }}
-        </p>
-        <div class="mt-6 flex flex-wrap items-center gap-3">
-          <RouterLink
-            to="/exhibitions"
-            class="bg-gold text-ink hover:bg-gold-hover inline-flex w-fit rounded-sm px-4 py-2 text-sm font-medium"
-          >
-            {{ t('home.heroCta') }}
-          </RouterLink>
-          <template v-if="slides.length > 1">
-            <button
-              type="button"
-              class="border-paper/40 hover:border-paper inline-flex h-9 w-9 items-center justify-center rounded-full border text-lg"
-              :aria-label="t('home.heroPrev')"
-              @click="showSlide(slideIndex - 1)"
+        <div class="min-w-0">
+          <p class="text-gold text-xs tracking-widest uppercase">
+            {{ featured ? t(`exhibitions.status.${featured.status}`) : t('home.heroEyebrow') }}
+          </p>
+          <h1 class="mt-3 max-w-xl text-3xl font-semibold sm:text-4xl">
+            {{ featured ? featured.title : t('home.heroTitle') }}
+          </h1>
+          <p class="text-paper/80 mt-3 max-w-lg text-sm">
+            {{ featured ? featured.summary : t('home.heroBody') }}
+          </p>
+          <div class="mt-6 flex flex-wrap items-center gap-3">
+            <RouterLink
+              :to="featured ? `/exhibitions/${featured.id}` : '/exhibitions'"
+              class="bg-gold text-ink hover:bg-gold-hover inline-flex w-fit rounded-sm px-4 py-2 text-sm font-medium"
             >
-              ‹
-            </button>
-            <button
-              type="button"
-              class="border-paper/40 hover:border-paper inline-flex h-9 w-9 items-center justify-center rounded-full border text-lg"
-              :aria-label="t('home.heroNext')"
-              @click="showSlide(slideIndex + 1)"
-            >
-              ›
-            </button>
-            <div class="flex items-center gap-2" role="tablist" :aria-label="t('home.heroSlides')">
+              {{ featured ? t('exhibitions.readMore') : t('home.heroCta') }}
+            </RouterLink>
+            <template v-if="slides.length > 1">
               <button
-                v-for="(slide, index) in slides"
-                :key="slide.id"
                 type="button"
-                role="tab"
-                class="h-2 rounded-full"
-                :class="index === slideIndex ? 'bg-gold w-6' : 'bg-paper/45 w-2'"
-                :aria-selected="index === slideIndex"
-                :aria-label="t('home.heroSlide', { title: slide.title })"
-                @click="showSlide(index)"
-              />
-            </div>
-          </template>
+                class="border-paper/40 hover:border-paper inline-flex h-9 w-9 items-center justify-center rounded-full border text-lg"
+                :aria-label="t('home.heroPrev')"
+                @click="showSlide(slideIndex - 1)"
+              >
+                ‹
+              </button>
+              <button
+                type="button"
+                class="border-paper/40 hover:border-paper inline-flex h-9 w-9 items-center justify-center rounded-full border text-lg"
+                :aria-label="t('home.heroNext')"
+                @click="showSlide(slideIndex + 1)"
+              >
+                ›
+              </button>
+              <div
+                class="flex items-center gap-2"
+                role="tablist"
+                :aria-label="t('home.heroSlides')"
+              >
+                <button
+                  v-for="(slide, index) in slides"
+                  :key="slide.id"
+                  type="button"
+                  role="tab"
+                  class="h-2 rounded-full"
+                  :class="index === slideIndex ? 'bg-gold w-6' : 'bg-paper/45 w-2'"
+                  :aria-selected="index === slideIndex"
+                  :aria-label="t('home.heroSlide', { title: slide.title })"
+                  @click="showSlide(index)"
+                />
+              </div>
+            </template>
+          </div>
         </div>
+        <img
+          v-if="featured?.imageUrl"
+          :src="featured.imageUrl"
+          alt=""
+          class="mb-1 hidden max-h-72 w-auto max-w-xs shrink-0 object-contain sm:block"
+        />
       </div>
     </section>
 
