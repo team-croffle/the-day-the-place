@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { API_ROUTES, type Exhibition } from '@nest-vue/shared';
-import { computed, onMounted, ref } from 'vue';
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { RouterLink } from 'vue-router';
 
@@ -8,9 +8,15 @@ import ExhibitionCard from '@/components/exhibitions/ExhibitionCard.vue';
 import HomeSearch from '@/components/home/HomeSearch.vue';
 import { apiFetch } from '@/composables/useApi';
 
+const HERO_LIMIT = 5;
+const HERO_MS = 6_000;
+
 const { t } = useI18n();
 
 const exhibitions = ref<Exhibition[]>([]);
+const slideIndex = ref(0);
+const paused = ref(false);
+let timer: ReturnType<typeof setInterval> | undefined;
 
 onMounted(async () => {
   try {
@@ -20,10 +26,63 @@ onMounted(async () => {
   }
 });
 
+onUnmounted(clearHeroTimer);
+
 const ongoing = computed(() =>
   exhibitions.value.filter((item) => item.status === 'ongoing').slice(0, 4),
 );
-const featured = computed(() => ongoing.value[0] ?? null);
+const slides = computed(() =>
+  exhibitions.value
+    .filter((item) => item.status === 'ongoing' && item.imageUrl)
+    .slice(0, HERO_LIMIT),
+);
+const featured = computed(() => slides.value[slideIndex.value] ?? null);
+
+watch(slides, (list) => {
+  if (slideIndex.value >= list.length) slideIndex.value = 0;
+  armHeroTimer();
+});
+
+function prefersStill(): boolean {
+  return (
+    typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  );
+}
+
+function clearHeroTimer(): void {
+  if (timer !== undefined) {
+    clearInterval(timer);
+    timer = undefined;
+  }
+}
+
+function armHeroTimer(): void {
+  clearHeroTimer();
+  if (paused.value || slides.value.length < 2 || prefersStill()) return;
+  timer = setInterval(() => {
+    slideIndex.value = (slideIndex.value + 1) % slides.value.length;
+  }, HERO_MS);
+}
+
+function showSlide(next: number): void {
+  const count = slides.value.length;
+  if (count === 0) return;
+  slideIndex.value = (next + count) % count;
+  armHeroTimer();
+}
+
+function holdHero(): void {
+  paused.value = true;
+  clearHeroTimer();
+}
+
+function releaseHero(event: MouseEvent | FocusEvent): void {
+  const next = event.relatedTarget;
+  const current = event.currentTarget;
+  if (next instanceof Node && current instanceof Node && current.contains(next)) return;
+  paused.value = false;
+  armHeroTimer();
+}
 const siteSlots = 6;
 const eraTabs = [
   'home.eraAll',
@@ -42,12 +101,31 @@ const eras = [
 
 <template>
   <div>
-    <section class="bg-ink text-paper relative min-h-[28rem]">
+    <section
+      class="bg-ink text-paper relative min-h-[28rem] overflow-hidden"
+      @pointerenter="holdHero"
+      @pointerleave="releaseHero"
+      @focusin="holdHero"
+      @focusout="releaseHero"
+    >
+      <img
+        v-if="featured?.imageUrl"
+        :src="featured.imageUrl"
+        alt=""
+        class="absolute inset-0 h-full w-full object-cover object-top"
+      />
       <div
-        class="from-ink via-ink/90 to-gold/30 absolute inset-0 bg-linear-to-br"
+        class="absolute inset-0"
+        :class="
+          featured?.imageUrl
+            ? 'from-ink via-ink/80 to-ink/25 bg-linear-to-r'
+            : 'from-ink via-ink/90 to-gold/30 bg-linear-to-br'
+        "
         aria-hidden="true"
       />
-      <div class="relative mx-auto flex min-h-[28rem] max-w-6xl flex-col justify-end px-6 pb-20">
+      <div
+        class="relative mx-auto flex min-h-[28rem] max-w-6xl flex-col justify-end px-6 pt-16 pb-24"
+      >
         <p class="text-gold text-xs tracking-widest uppercase">
           {{ featured ? t(`exhibitions.status.${featured.status}`) : t('home.heroEyebrow') }}
         </p>
@@ -57,12 +135,45 @@ const eras = [
         <p class="text-paper/80 mt-3 max-w-lg text-sm">
           {{ featured ? featured.summary : t('home.heroBody') }}
         </p>
-        <RouterLink
-          to="/exhibitions"
-          class="bg-gold text-ink hover:bg-gold-hover mt-6 inline-flex w-fit rounded-sm px-4 py-2 text-sm font-medium"
-        >
-          {{ t('home.heroCta') }}
-        </RouterLink>
+        <div class="mt-6 flex flex-wrap items-center gap-3">
+          <RouterLink
+            to="/exhibitions"
+            class="bg-gold text-ink hover:bg-gold-hover inline-flex w-fit rounded-sm px-4 py-2 text-sm font-medium"
+          >
+            {{ t('home.heroCta') }}
+          </RouterLink>
+          <template v-if="slides.length > 1">
+            <button
+              type="button"
+              class="border-paper/40 hover:border-paper inline-flex h-9 w-9 items-center justify-center rounded-full border text-lg"
+              :aria-label="t('home.heroPrev')"
+              @click="showSlide(slideIndex - 1)"
+            >
+              ‹
+            </button>
+            <button
+              type="button"
+              class="border-paper/40 hover:border-paper inline-flex h-9 w-9 items-center justify-center rounded-full border text-lg"
+              :aria-label="t('home.heroNext')"
+              @click="showSlide(slideIndex + 1)"
+            >
+              ›
+            </button>
+            <div class="flex items-center gap-2" role="tablist" :aria-label="t('home.heroSlides')">
+              <button
+                v-for="(slide, index) in slides"
+                :key="slide.id"
+                type="button"
+                role="tab"
+                class="h-2 rounded-full"
+                :class="index === slideIndex ? 'bg-gold w-6' : 'bg-paper/45 w-2'"
+                :aria-selected="index === slideIndex"
+                :aria-label="t('home.heroSlide', { title: slide.title })"
+                @click="showSlide(index)"
+              />
+            </div>
+          </template>
+        </div>
       </div>
     </section>
 
