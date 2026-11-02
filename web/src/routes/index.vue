@@ -14,6 +14,7 @@ const HERO_MS = 6_000;
 const { t } = useI18n();
 
 const exhibitions = ref<Exhibition[]>([]);
+const exhibitionsPending = ref(true);
 const slideIndex = ref(0);
 const paused = ref(false);
 let timer: ReturnType<typeof setInterval> | undefined;
@@ -23,6 +24,8 @@ onMounted(async () => {
     exhibitions.value = await apiFetch<Exhibition[]>(`/${API_ROUTES.EXHIBITIONS}`);
   } catch {
     exhibitions.value = [];
+  } finally {
+    exhibitionsPending.value = false;
   }
 });
 
@@ -194,7 +197,10 @@ const eras = [
           {{ t('home.seeAll') }}
         </RouterLink>
       </div>
-      <p v-if="ongoing.length === 0" class="text-muted text-sm">{{ t('exhibitions.empty') }}</p>
+      <p v-if="exhibitionsPending" class="text-muted text-sm">{{ t('home.exhibitionsLoading') }}</p>
+      <p v-else-if="ongoing.length === 0" class="text-muted text-sm">
+        {{ t('exhibitions.empty') }}
+      </p>
       <ul v-else class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <li v-for="item in ongoing" :key="item.id">
           <ExhibitionCard :exhibition="item" />
