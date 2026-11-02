@@ -39,7 +39,7 @@ the-day-the-place/
 │  ├─ 그 날, 그 곳 기획서.md  제품 정의
 │  ├─ design-drafts/        화면 시안 png 9장
 │  └─ history/YYYY-MM-DD/   작업 이력. 핵심 결정만
-├─ .note/                   사용자가 보는 로컬 정리. .gitignore
+├─ .note/                   사용자가 보는 로컬 정리. .gitignore. 배포할-때.md
 ├─ .github/                 PR 템플릿, labeler, workflows/ci.yml
 ├─ .cursor/commands/review.md  커밋 전 리뷰 절차
 ├─ .cursor/mcp.json         Eraser MCP. 로그인 전에는 그림을 만들지 못한다
@@ -47,13 +47,15 @@ the-day-the-place/
 ├─ docs/                    CODEMAP.md, ARCHITECTURE.ko.md, img/architecture PNG 3장
 ├─ docker/                  Dockerfile + compose 2개
 ├─ shared/src/              constants/ types/ + index.ts 배럴
-├─ server/src/              main.ts app.module.ts + 모듈 4개
+├─ server/src/              main.ts app.module.ts
 │  ├─ common/filters/       전역 예외 필터
 │  ├─ auth/                 Better Auth 세션. /api/auth 와 관리자 가드
 │  ├─ admin/                GET /api/admin/collector. 관리자 세션
 │  ├─ database/             Drizzle 연결 + schema/
 │  ├─ health/               /api/health
 │  ├─ places/               /api/places
+│  ├─ exhibitions/          /api/exhibitions. 저장 행과 전시정보(통합)
+│  ├─ collector/            수집 ingest API
 │  ├─ favorites/            /api/favorites. 회원 저장과 공개 수
 │  └─ users/                /api/users. 관리자 세션만
 ├─ web/src/                 main.ts app.vue router.ts
@@ -64,7 +66,7 @@ the-day-the-place/
 │  ├─ lib/kakaoMap.ts       카카오 SDK 로더
 │  ├─ lib/mapRegion.ts      지역 칩 주소 별칭·지도 중심
 │  └─ types/kakao.ts        카카오 SDK 타입 직접 선언
-└─ collector/src/collector/ pipeline.py news.py extract.py poster.py places.py store.py settings.py log.py
+└─ collector/               협회 글 배치. 파일 구성은 collector/README.md
 ```
 
 ## shared — 계약이 모여 있는 곳
@@ -170,7 +172,7 @@ the-day-the-place/
 | `src/components/AppHeader.vue`                                     | 상단 셸. 로그인 이름은 `/me`. 관리자는 이름 아래 마이페이지·관리자 페이지                                                                                                                                                                     | `authClient`, `nav.ts`                                                                                                  |
 | `src/components/AppFooter.vue`                                     | 하단 셸. 「서비스」칸은 시안 플레이스홀더다                                                                                                                                                                                                   | —                                                                                                                       |
 | `src/components/LocaleSwitcher.vue`                                | 언어 select. 고르면 `setLocale`로 저장까지                                                                                                                                                                                                    | `i18n/index.ts`                                                                                                         |
-| `src/components/PageStub.vue`                                      | 제목·본문 키만 받아 뿌리는 준비중 화면                                                                                                                                                                                                        | login·signup. 박물관·유적지·특별전은 목록·상세로 바뀌었다                                                               |
+| `src/components/PageStub.vue`                                      | 제목·본문 키만 받아 뿌리는 준비중 화면. **지금 라우트는 이 컴포넌트를 쓰지 않는다**                                                                                                                                                           | —                                                                                                                       |
 | `src/components/HealthCard.vue`                                    | `/api/health` 카드. **현재 어느 화면에도 붙어 있지 않다**                                                                                                                                                                                     | `useApi.ts`                                                                                                             |
 | `src/components/home/HomeSearch.vue`                               | 메인 검색 폼. 이름과 지역을 `/map?q=&region=`로 넘긴다. 시대는 장소 데이터에 없어 넘기지 않는다                                                                                                                                               | `shared`의 `MAP_REGION_CHIPS`, `routes/map.vue`                                                                         |
 | `src/components/map/KakaoMap.vue`                                  | 지도 인스턴스 담당. 부모 칸의 픽셀 크기를 직접 넣고 나서 `Map`을 만든다. 크롬은 flex+absolute만으로 높이가 0이 되는 경우가 있다                                                                                                               | `lib/kakaoMap.ts`. `map.vue`가 `idle`에서 줌 레벨을 받는다                                                              |
@@ -194,13 +196,13 @@ the-day-the-place/
 | `vite.config.ts`                                                   | 플러그인 순서(VueRouter → vue → tailwind → devtools), alias, 포트, `/api` 프록시                                                                                                                                                              | `tsconfig.json` paths와 짝                                                                                              |
 | `env.d.ts`                                                         | `VITE_*` 네 개의 타입 선언                                                                                                                                                                                                                    | `useApi.ts`, `lib/kakaoMap.ts`                                                                                          |
 
-## collector — 구현 없음. 계약은 협회 글
+## collector — 협회 글 배치
 
-`feat/association-collector`에서 이전 Python 구현을 뺐다. 남은 것은 `README.md` 계약과 `.python-version`, 빈 `.env.example`, `.dockerignore`다. `pyproject.toml`, `src/`, `tests/`, `modal_app.py`, `Dockerfile`, `uv.lock`은 없다. `pnpm lint:py`와 `pnpm test:py`는 패키지를 다시 만들기 전에는 실패한다.
+구현은 `collector/`에 있다. `run()`이 한국박물관협회 회원관 소식과 뮤지엄뉴스 전시를 읽고, 추출한 전시만 서버 ingest로 보낸다. DB에 직접 붙지 않는다. 파일 구성은 `collector/README.md`가 정본이다.
 
-계약은 `docs/ARCHITECTURE.ko.md`와 `collector/README.md`다. DB에 남는 수집 결과는 추출된 전시 행과 출처별 마지막 글 번호다. 글 원문, HTML, 전시정보(통합) 응답, 소장품 목록은 넣지 않는다. 옛 코드는 `archive/yonhap-collector`에 있다.
+DB에 남는 수집 결과는 추출된 전시 행과 출처별 마지막 글 번호다. 글 원문, HTML, 전시정보(통합) 응답, 소장품 목록은 넣지 않는다. 옛 연합뉴스 코드는 `archive/yonhap-collector`에 있다.
 
-서버 `server/src/collector/`의 ingest API는 그대로다. 새 수집기도 그 경로로 보낸다.
+서버 `server/src/collector/`의 ingest API는 그대로다. 수집기도 그 경로로 보낸다.
 
 ## 루트 도구와 인프라
 
@@ -263,12 +265,12 @@ the-day-the-place/
 
 ## 지금 비어 있는 곳 · 함정
 
-- `collector/`의 Python 구현은 `feat/association-collector`에서 뺐다. 계약은 한국박물관협회 회원관 소식과 뮤지엄뉴스 전시다. DB에는 추출된 전시 행과 출처별 글 번호만 넣는다. 기간은 규칙으로 읽고, 종료일을 못 읽은 글만 Gemini에 보낸다. 이미지 파일은 복사하지 않는다. 전시정보(통합)과 소장품은 저장하지 않고 요청할 때 읽는다. 소장품은 `GET /api/places/tour/:id/relics`와 `GET /api/places/relics`로 읽고 DB에 넣지 않는다. 구현을 다시 넣기 전에는 Modal 크론을 배포하지 않는다. 옛 코드는 `archive/yonhap-collector`에 있다.
+- 수집기는 협회 회원관 소식과 뮤지엄뉴스 전시를 읽고, 추출된 전시 행과 출처별 글 번호만 DB에 남긴다. 글 원문, HTML, 전시정보(통합) 응답, 소장품 목록은 넣지 않는다. 기간은 규칙으로 읽고, 종료일을 못 읽은 글만 Gemini에 보낸다. 이미지 파일은 복사하지 않는다. 소장품은 `GET /api/places/tour/:id/relics`와 `GET /api/places/relics`로 읽고 DB에 넣지 않는다. 옛 연합뉴스 코드는 `archive/yonhap-collector`에 있다.
 - `heritage`(국가유산 API) 갈래는 자리만 있다. 항상 `not_requested`로 내려간다.
 - `HealthCard.vue`, `useApi()`(컴포저블 쪽)는 화면에 붙어 있지 않다. 지도는 `apiFetch`만 쓴다.
 - 마커 클릭 인포윈도우와 우측 프리뷰 패널은 장소 선택 시에만 열린다. 평점·시대·키워드·상세 CTA는 데이터·페이지가 없어서 넣지 않았다.
 - 시안의 평점·시대·키워드는 데이터에 없어서 사이드바에 넣지 않았다.
-- 메인·목록 화면은 대부분 자리만 잡힌 상태다. 검색 폼도 값을 넘기지 않는다.
+- 메인 아래 추천 유적지와 시대 구분은 자리만이다. 박물관·유적지·특별전 목록은 데이터를 보여 준다. 메인 검색은 이름과 지역을 지도로 넘긴다.
 - `server/README.md`에 적힌 `HERITAGE_API_*`, `NODE_ENV`는 코드가 읽지 않는다.
 - 서버 산출물 경로가 `dist/server/src/main.js`다(`rootDir`가 저장소 루트라서). 실행 스크립트가 이 경로를 쓴다.
 - 가입은 `email_verified` 전에는 세션을 주지 않는다. Resend 도메인 인증 전에는 시험 계정 메일로만 발송된다. 첫 관리자는 DB에서 `role`을 `admin`으로 바꾼다.
@@ -291,6 +293,6 @@ the-day-the-place/
 | `server/src/exhibitions/culture-exhibitions.spec.ts` | 전시정보(통합)은 박물관만 남긴다. 상설·종료·미술관은 버린다. 같은 저장 행은 목록에서 빠진다                                                                                   |
 | `server/src/places/emuseum.spec.ts`                  | 소장품은 공백을 뺀 같은 기관명만 붙인다. 공개 행에 원천 이미지 주소의 키를 넣지 않는다. 목록은 큰 썸네일과 전체 건수, 소장 기관 이름을 읽는다. 이름 안의 줄바꿈은 공백이 된다 |
 | `server/test/app.e2e-spec.ts`                        | `/api/health`가 200과 `status: 'ok'`를 준다 (DB는 가짜)                                                                                                                       |
-| `collector/tests/`                                   | `feat/association-collector`에서 이전 배치와 함께 뺐다. 계약을 구현할 때 다시 쓴다                                                                                            |
+| `collector/tests/`                                   | 기간 추출, 출처 글, 파이프라인, Gemini 중복 제거                                                                                                                              |
 
 테스트는 제품 규칙이 깨지는지만 본다. DTO 범위나 설정에 가까운 것은 일부러 두지 않는다(AGENTS.md「테스트」).

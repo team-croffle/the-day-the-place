@@ -7,6 +7,7 @@
 
 ```
 .
+├── docs/        코드맵, 아키텍처
 ├── web/         Vue 3 + Vite + Tailwind v4        → 화면
 ├── server/      NestJS 12 + Drizzle ORM + Better Auth → API, 원천 프록시, 회원 세션
 ├── shared/      공용 타입·인터페이스·상수           → server / web 이 소스로 직접 참조
@@ -15,6 +16,7 @@
 ```
 
 `web` · `server` · `shared` 는 pnpm 워크스페이스, `collector` 는 독립된 uv 프로젝트다.
+에이전트 규칙은 루트 `AGENTS.md`, 파일 지도는 [docs/CODEMAP.md](docs/CODEMAP.md)다.
 자세한 내용은 각 디렉토리의 README 를 본다.
 
 - [server/README.md](server/README.md) — 환경 변수, Drizzle, 빌드 산출물 경로
@@ -34,7 +36,7 @@
 ## 시작하기
 
 ```bash
-git clone <repo> && cd nest-vue
+git clone <repo> && cd the-day-the-place
 
 corepack enable
 pnpm install                      # 워크스페이스 설치 + husky 훅 등록
