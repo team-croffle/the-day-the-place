@@ -33,11 +33,13 @@
 ```
 the-day-the-place/
 ├─ AGENTS.md                에이전트 운영 규칙
-├─ .ai/                     로컬 전용. 루트 .gitignore로 제외
+├─ .ai/                     에이전트가 보는 로컬 자료. .gitignore
 │  ├─ ROADMAP.md            내부 로드맵 (버전별 계획)
-│  ├─ DEPLOY.md             Netlify · Docker · Modal 배포 메모. 쓰기 API는 아직 없다
+│  ├─ DEPLOY.md             Netlify · Docker · Modal 배포 메모
+│  ├─ 그 날, 그 곳 기획서.md  제품 정의
 │  ├─ design-drafts/        화면 시안 png 9장
 │  └─ history/YYYY-MM-DD/   작업 이력. 핵심 결정만
+├─ .note/                   사용자가 보는 로컬 정리. .gitignore
 ├─ .github/                 PR 템플릿, labeler, workflows/ci.yml
 ├─ .cursor/commands/review.md  커밋 전 리뷰 절차
 ├─ .cursor/mcp.json         Eraser MCP. 로그인 전에는 그림을 만들지 못한다

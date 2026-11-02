@@ -39,8 +39,9 @@ __pycache__/
 .DS_Store
 Thumbs.db
 
-# local agent notes. 이력·시안·내부 로드맵. 규칙과 코드맵은 저장소에 둔다
+# local only. 규칙과 코드맵은 저장소에 둔다
 .ai/
+.note/
 
 # logs
 *.log
