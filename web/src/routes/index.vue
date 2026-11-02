@@ -108,12 +108,15 @@ const eras = [
       @focusin="holdHero"
       @focusout="releaseHero"
     >
-      <img
-        v-if="featured?.imageUrl"
-        :src="featured.imageUrl"
-        alt=""
-        class="pointer-events-none absolute inset-y-0 right-0 h-full w-[86%] max-w-4xl object-cover object-[center_40%]"
-      />
+      <div v-if="featured?.imageUrl" class="pointer-events-none absolute inset-0">
+        <div class="relative mx-auto h-full max-w-6xl">
+          <img
+            :src="featured.imageUrl"
+            alt=""
+            class="absolute inset-y-0 right-6 h-full w-[86%] max-w-4xl object-cover object-[center_40%]"
+          />
+        </div>
+      </div>
       <div
         class="absolute inset-0"
         :class="
