@@ -15,7 +15,8 @@ import { type ExhibitionRow, exhibitions } from '../database/schema';
 import { TourAdapter } from '../places/adapters/tour.adapter';
 import { fetchCultureExhibitions, omitRowsCoveredByCulture } from './culture-exhibitions';
 
-const CULTURE_TTL_MS = 10 * 60 * 1000;
+/** 전시정보(통합)은 하루에 한 번 정도 바뀐다. 메모리가 비면 첫 요청이 읽고 24시간 둔다. */
+const CULTURE_TTL_MS = 24 * 60 * 60 * 1000;
 
 @Injectable()
 export class ExhibitionsService {
