@@ -3,7 +3,7 @@
 ## 절차
 
 1. 커밋된 범위는 `git diff master...HEAD --stat`으로 본다. 아직 커밋 전이면 `git diff`와 `git diff --cached`를 본다.
-2. `.ai/AGENTS.md`, `.ai/CODEMAP.md`의 함정, 이번 작업의 `.ai/history/`를 읽는다. 화면을 건드렸으면 `.ai/design-drafts/`의 해당 화면을 본다.
+2. `AGENTS.md`, `docs/CODEMAP.md`의 함정, 이번 작업의 `.ai/history/`를 읽는다. 화면을 건드렸으면 `.ai/design-drafts/`의 해당 화면을 본다.
 3. 아래 관점으로 점검한다.
 4. 문제만 보고한다. 고치지 않는다.
 
