@@ -30,40 +30,6 @@ VITE_API_BASE_URL=/api
 VITE_KAKAO_MAP_KEY=
 ```
 
-## Cloudflare Workers 배포
-
-`dayplace.croffledev.kr`에서 정적 화면을 제공하고, `/api`와 `/api/*`는
-`worker/index.mjs`가 `https://api.dayplace.croffledev.kr`의 같은 경로로 전달한다.
-홈랩의 API는 이 백엔드 주소로 먼저 접근 가능해야 한다. Cloudflare Tunnel이나
-홈랩 리버스 프록시에서 NestJS 서비스로 연결한다. `/api` 접두사는 제거하지 않는다.
-
-Cloudflare Git 연동 설정은 저장소 루트를 기준으로 한다.
-
-| 항목           | 값                                                                    |
-| -------------- | --------------------------------------------------------------------- |
-| 빌드 명령      | `pnpm --filter @nest-vue/web build`                                   |
-| 배포 명령      | `npx wrangler deploy`                                                 |
-| 빌드 환경 변수 | `VITE_API_BASE_URL=/api`, `VITE_KAKAO_MAP_KEY=<카카오 JavaScript 키>` |
-| 사용자 도메인  | `dayplace.croffledev.kr`                                              |
-
-`VITE_*`는 빌드에 포함된다. 기존 `VITE_API_BASE_URL`이 백엔드 절대 주소였다면
-`/api`로 변경하고 다시 빌드한다. 카카오 개발자 콘솔에도 프론트 도메인을 등록한다.
-`VITE_API_PROXY_TARGET`은 개발 서버에서만 사용하며 운영 프록시에는 적용되지 않는다.
-
-홈랩 서버 환경 변수는 다음과 같이 맞춘다.
-
-```dotenv
-CORS_ORIGIN=https://dayplace.croffledev.kr
-BETTER_AUTH_URL=https://dayplace.croffledev.kr
-```
-
-인증 URL은 브라우저가 접근하는 공개 주소를 사용한다. 인증 쿠키의 Domain을
-백엔드 호스트로 고정하지 않는다. 프록시는 요청의 메서드·본문·쿼리·쿠키와
-응답의 상태·Set-Cookie·스트림을 유지하고 리다이렉트를 대신 따라가지 않는다.
-
-배포 후 `/api/health`가 JSON을 반환하는지, `/map` 직접 접근과 새로고침이 되는지,
-로그인 후 새로고침에도 세션이 유지되는지 확인한다. 홈랩이 준비되기 전에는 API 연결을 검증할 수 없다.
-
 ## 라우팅
 
 `vue-router` v5 의 내장 파일 기반 라우팅을 사용한다 (구 `unplugin-vue-router` 가 v5 에 통합됨).
