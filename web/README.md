@@ -18,7 +18,7 @@ pnpm --filter @nest-vue/web preview
 | ----------------------- | ----------------------- | ------------------------------------------------------- |
 | `VITE_PORT`             | `5173`                  | dev 서버 포트                                           |
 | `VITE_API_PROXY_TARGET` | `http://localhost:3000` | dev 프록시 대상(NestJS)                                 |
-| `VITE_API_BASE_URL`     | `/api`                  | 클라이언트가 호출할 API 베이스                          |
+| `VITE_API_BASE_URL`     | `/api`                  | 클라이언트가 호출할 API 베이스. 운영에서도 `/api`       |
 | `VITE_KAKAO_MAP_KEY`    | -                       | 카카오맵 JS 키. `index.html` 동기 스크립트에도 들어간다 |
 
 예시:
@@ -29,6 +29,8 @@ VITE_API_PROXY_TARGET=http://localhost:3000
 VITE_API_BASE_URL=/api
 VITE_KAKAO_MAP_KEY=
 ```
+
+운영 화면은 Cloudflare Workers `dayplace`가 `https://dayplace.croffledev.kr`에서 연다. 빌드에 `VITE_KAKAO_MAP_KEY`가 있어야 한다. `VITE_API_BASE_URL`은 `/api`로 둔다. Worker가 그 경로를 `https://api.dayplace.croffledev.kr`로 넘긴다.
 
 ## 라우팅
 
