@@ -84,11 +84,11 @@ pnpm dev                          # server(3000) + web(5173) 동시 실행
 
 ## 배포 (요약)
 
-| 프로세스           | 어디에                                      | 비고                                        |
-| ------------------ | ------------------------------------------- | ------------------------------------------- |
-| web (정적)         | Netlify 또는 Docker nginx                   | 미정                                        |
-| server (API + SSE) | Docker 한 대 (`docker/docker-compose.yaml`) | SSE 때문에 서버리스 불가, 1대 고정          |
-| postgres           | 같은 compose                                |                                             |
-| collector          | Modal (`modal.Cron`)                        | 안 되면 GCP Cloud Run Job + Cloud Scheduler |
+| 프로세스     | 어디에                                      | 비고                                                                                              |
+| ------------ | ------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| web          | Cloudflare Workers (`dayplace`)             | `https://dayplace.croffledev.kr`. `/api`는 Worker가 `https://api.dayplace.croffledev.kr`로 넘긴다 |
+| server (API) | Docker 한 대 (`docker/docker-compose.yaml`) | 이미지 `ghcr.io/team-croffle/dayplace`. 공개 호스트 `https://api.dayplace.croffledev.kr`          |
+| postgres     | 같은 compose                                |                                                                                                   |
+| collector    | Modal (`modal.Cron`)                        | 안 되면 GCP Cloud Run Job + Cloud Scheduler                                                       |
 
 Redis 는 쓰지 않는다. 지도 원천 호출은 디바운스·bbox 로 줄이고, 댓글 초안은 브라우저 localStorage 에 둔다.

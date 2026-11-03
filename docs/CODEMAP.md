@@ -41,7 +41,7 @@ the-day-the-place/
 ├─ worker/index.mjs         운영 /api 프록시, 나머지는 ASSETS로 전달
 ├─ .ai/                     에이전트가 보는 로컬 자료. .gitignore
 │  ├─ ROADMAP.md            내부 로드맵 (버전별 계획)
-│  ├─ DEPLOY.md             Netlify · Docker · Modal 배포 메모
+│  ├─ DEPLOY.md             Cloudflare · Docker · Modal 배포 메모
 │  ├─ 그 날, 그 곳 기획서.md  제품 정의
 │  ├─ design-drafts/        화면 시안 png 9장
 │  └─ history/YYYY-MM-DD/   작업 이력. 핵심 결정만
@@ -221,7 +221,7 @@ DB에 남는 수집 결과는 추출된 전시 행과 출처별 마지막 글 �
 | `.github/PULL_REQUEST_TEMPLATE.md`                     | PR 본문 칸. 요약, 변경 사항, 테스트, 메모                                                                                                                                                                                                                                                         | master로 여는 PR에 붙는다                  |
 | `.github/labeler.yml`, `.github/workflows/labeler.yml` | PR에서 바뀐 경로로 `server` `web` `shared` `collector` 라벨을 붙인다. `sync-labels: true`                                                                                                                                                                                                         | `actions/labeler@v7`. master로 향하는 PR만 |
 | `.github/workflows/ci.yml`                             | master 푸시와 PR에서 install → lint → format:check → typecheck → test. 다른 브랜치 푸시만으로는 돌지 않는다. Node 22, pnpm은 `packageManager` 값                                                                                                                                                  | Python 검사는 CI에 없다                    |
-| `.github/workflows/release.yml`                        | Actions에서 버전을 적어 master에서만 실행한다. 루트 `package.json`을 그 버전으로 커밋하고 git 태그 `v0.1.0`을 푸시한 뒤 API 이미지를 GHCR에 올린다. 이미지 태그는 `0.1.0`, `v0.1.0`이고, 하이픈이 없는 버전이면 `latest`도 갱신한다. 초안 GitHub Release를 만든다. `docker/Dockerfile`의 `runner` | `ghcr.io/team-croffle/the-day-the-place`   |
+| `.github/workflows/release.yml`                        | Actions에서 버전을 적어 master에서만 실행한다. 루트 `package.json`을 그 버전으로 커밋하고 git 태그 `v0.1.0`을 푸시한 뒤 API 이미지를 GHCR에 올린다. 이미지 태그는 `0.1.0`, `v0.1.0`이고, 하이픈이 없는 버전이면 `latest`도 갱신한다. 초안 GitHub Release를 만든다. `docker/Dockerfile`의 `runner` | `ghcr.io/team-croffle/dayplace`            |
 | `.cursor/commands/review.md`                           | 커밋 전 리뷰 절차. 보안, 제품 계약, 정합성, 명세, 구조, 이름. 문제는 보고만 한다                                                                                                                                                                                                                  | `AGENTS.md`「리뷰」가 이 파일을 시킨다     |
 | `docker/docker-compose.dev.yaml`                       | 개발용. Postgres 18 + Adminer를 띄운다. 서버는 `server` 프로파일이라 기본으로 안 뜬다                                                                                                                                                                                                             | `pnpm docker:dev`                          |
 | `docker/docker-compose.yaml`                           | 배포용. Postgres(포트 미공개) + GHCR의 API 이미지. `up --build`는 그 머신에서 다시 만든다                                                                                                                                                                                                         | `pnpm docker:prod`                         |
@@ -256,9 +256,10 @@ DB에 남는 수집 결과는 추출된 전시 행과 출처별 마지막 글 �
 
 ## 짝을 맞춰 둬야 하는 곳
 
-운영 웹의 `VITE_API_BASE_URL=/api`, 서버의 `CORS_ORIGIN`과 `BETTER_AUTH_URL`은
-`https://dayplace.croffledev.kr` 기준이다. Worker의 백엔드 호스트와 홈랩 공개 호스트는
-`api.dayplace.croffledev.kr`로 맞춘다. 실제 연결과 로그인 검증은 홈랩 배포 후 필요하다.
+운영 웹은 Cloudflare Workers `dayplace`이고 주소는 `https://dayplace.croffledev.kr`이다.
+`VITE_API_BASE_URL`은 `/api`다. Worker가 그 경로를 `https://api.dayplace.croffledev.kr`로 넘긴다.
+서버 `CORS_ORIGIN`은 웹 오리진, `BETTER_AUTH_URL`은 API 호스트다. GHCR 이미지 이름은
+`ghcr.io/team-croffle/dayplace`이고, 릴리즈 워크플로와 compose가 같은 이름을 쓴다.
 
 | 한쪽                             | 다른쪽                                                                | 무엇이 깨지나                                  |
 | -------------------------------- | --------------------------------------------------------------------- | ---------------------------------------------- |
@@ -266,13 +267,14 @@ DB에 남는 수집 결과는 추출된 전시 행과 출처별 마지막 글 �
 | `shared`의 `API_ROUTES`          | 서버 컨트롤러 경로, `useMapPlaces`의 URL                              | 같은 문자열이 두 곳에서 갈라진다               |
 | `shared`의 `USER_ROLES`          | `schema/users.ts`의 `user_role` enum, Better Auth `role` 추가 필드    | DB enum과 세션 역할이 갈라진다                 |
 | `BETTER_AUTH_URL`                | 인증 메일 링크                                                        | 비우면 `localhost:3000` 링크가 나간다          |
-| `CORS_ORIGIN`이 `https://`       | 세션 쿠키 `Secure`                                                    | Netlify와 API가 다른 주소면 로그인이 안 남는다 |
+| `CORS_ORIGIN`이 `https://`       | 세션 쿠키 `Secure`. 값은 `https://dayplace.croffledev.kr`             | 웹 오리진과 다르면 로그인이 안 남는다          |
 | `shared`의 `EXHIBITION_STATUSES` | `schema/exhibitions.ts`의 `exhibition_status` enum                    | 수집기 상태와 DB enum이 갈라진다               |
 | `shared`의 로케일 상수           | `web/src/i18n/locales/*.json`                                         | 없는 언어를 고를 수 있게 된다                  |
 | `ko.json` ↔ `en.json`            | 키 구조                                                               | 한쪽 언어에서 문구가 비어 보인다               |
 | 서버 bbox 상한 8도               | `useMapPlaces`의 `KOREA_MAP_BBOX`                                     | 전국 조회가 400으로 막힌다                     |
 | `shared`의 `TOUR_AREA_CODES`     | `server/.../tour.areas.ts`의 bbox 표                                  | 지역코드 목록이 두 곳에 있다(현재 표만 쓰인다) |
 | 릴리즈에 적은 버전               | 루트 `package.json`의 `version`, git 태그 `v…`, GHCR `0.1.0`·`v0.1.0` | 파일·태그와 서버가 받는 이미지가 갈라진다      |
+| `release.yml`의 `IMAGE_NAME`     | `docker/docker-compose.yaml`의 이미지 `ghcr.io/team-croffle/dayplace` | 서버가 다른 이름의 이미지를 받는다             |
 
 ## 지금 비어 있는 곳 · 함정
 

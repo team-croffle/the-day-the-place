@@ -1,19 +1,21 @@
 # 아키텍처
 
-화면은 Netlify, API와 Postgres는 팀 서버의 Docker, 수집기는 Modal이다. 장소, 전시정보(통합), 소장품은 요청할 때 읽고, 협회 글에서 만든 특별전만 DB에 남긴다.
+화면은 Cloudflare Workers, API와 Postgres는 팀 서버의 Docker, 수집기는 Modal이다. 장소, 전시정보(통합), 소장품은 요청할 때 읽고, 협회 글에서 만든 특별전만 DB에 남긴다.
 
 ## 시스템
 
 ![시스템 개요](./img/architecture/01-system-overview.jpg)
 
-| 구성 요소     | 실행 형태                      | 하는 일                                                |
-| ------------- | ------------------------------ | ------------------------------------------------------ |
-| **web**       | Netlify. Vue 빌드              | 지도, 박물관, 유적지, 특별전, 소장품                   |
-| **server**    | 팀 서버 Docker. Nest           | `/api`. TourAPI·전시정보(통합)·e뮤지엄을 대신 호출     |
-| **Postgres**  | 같은 compose. 포트는 망 안에만 | `exhibitions`, `collect_cursors`, `users`, `favorites` |
-| **collector** | Modal. 매일 03:00 Asia/Seoul   | 협회 글에서 전시를 골라 JSON을 서버에 보냄             |
+개요 그림 왼쪽 칸의 호스트 이름은 예전 것이다. 화면은 Cloudflare Workers이고, 주소는 `https://dayplace.croffledev.kr`이다.
 
-브라우저와 Modal은 `https://<API 도메인>`으로 Nest에 닿는다. Postgres `5432`는 인터넷에 열지 않는다.
+| 구성 요소     | 실행 형태                                                       | 하는 일                                                |
+| ------------- | --------------------------------------------------------------- | ------------------------------------------------------ |
+| **web**       | Cloudflare Workers `dayplace`. `https://dayplace.croffledev.kr` | 지도, 박물관, 유적지, 특별전, 소장품                   |
+| **server**    | 팀 서버 Docker. Nest                                            | `/api`. TourAPI·전시정보(통합)·e뮤지엄을 대신 호출     |
+| **Postgres**  | 같은 compose. 포트는 망 안에만                                  | `exhibitions`, `collect_cursors`, `users`, `favorites` |
+| **collector** | Modal. 매일 03:00 Asia/Seoul                                    | 협회 글에서 전시를 골라 JSON을 서버에 보냄             |
+
+브라우저는 `https://dayplace.croffledev.kr`의 `/api`로 요청하고, Worker가 `https://api.dayplace.croffledev.kr`로 넘긴다. Modal은 그 API 호스트를 직접 호출한다. Postgres `5432`는 인터넷에 열지 않는다.
 
 ## 전시가 화면에 나오기까지
 
@@ -69,11 +71,11 @@
 
 ## 배포
 
-| 자리    | 무엇을 올리나                                                                                          |
-| ------- | ------------------------------------------------------------------------------------------------------ |
-| Netlify | `web/dist`. 빌드 때 `VITE_API_BASE_URL`, `VITE_KAKAO_MAP_KEY`                                          |
-| 팀 서버 | `docker/docker-compose.yaml`. Nest와 Postgres. `CORS_ORIGIN`은 Netlify 주소                            |
-| Modal   | `collector/modal_app.py`. 시크릿 `geunal-collector`. `modal deploy` 전에는 새벽 실행이 등록되지 않는다 |
+| 자리       | 무엇을 올리나                                                                                                                                                                    |
+| ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Cloudflare | Worker `dayplace`. 정적 파일은 `web/dist`. 빌드 때 `VITE_KAKAO_MAP_KEY`. `VITE_API_BASE_URL`은 `/api`                                                                            |
+| 팀 서버    | `docker/docker-compose.yaml`. 이미지 `ghcr.io/team-croffle/dayplace`. `CORS_ORIGIN`은 `https://dayplace.croffledev.kr`. `BETTER_AUTH_URL`은 `https://api.dayplace.croffledev.kr` |
+| Modal      | `collector/modal_app.py`. 시크릿 `geunal-collector`. `modal deploy` 전에는 새벽 실행이 등록되지 않는다                                                                           |
 
 서버 환경에 `TOUR_API_KEY`, `CULTURE_API_KEY`, `EMUSEUM_SERVICE_KEY`, `COLLECTOR_INGEST_SECRET`이 있어야 한다. 수집 비밀은 Modal과 같은 값이고, 비어 있으면 수집 API는 거절한다. `DATABASE_URL`은 compose가 망 안의 `postgres:5432`로 만든다.
 

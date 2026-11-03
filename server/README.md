@@ -23,24 +23,24 @@ pnpm docker:dev
 
 `server/.env` 를 직접 만들고 아래 값을 채운다. 예시 파일은 없다.
 
-| 변수                      | 필수 | 기본값                                        | 설명                                             |
-| ------------------------- | ---- | --------------------------------------------- | ------------------------------------------------ |
-| `DATABASE_URL`            | O    | -                                             | `postgresql://user:pass@host:5432/db`            |
-| `PORT`                    | X    | `3000`                                        | HTTP 포트                                        |
-| `CORS_ORIGIN`             | X    | `*`                                           | 허용 오리진                                      |
-| `DATABASE_POOL_MAX`       | X    | `10`                                          | pg 커넥션 풀 최대 크기                           |
-| `NODE_ENV`                | X    | -                                             | `development` / `production`                     |
-| `TOUR_API_KEY`            | O    | -                                             | 한국관광공사 TourAPI (v0.1)                      |
-| `TOUR_API_BASE_URL`       | X    | `https://apis.data.go.kr/B551011/KorService2` | TourAPI 베이스 URL                               |
-| `HERITAGE_API_BASE_URL`   | X    | -                                             | 국가유산청 API 베이스 (v0.2 상세)                |
-| `HERITAGE_API_KEY`        | X    | -                                             | 국가유산청이 키를 요구하면 추가                  |
-| `CULTURE_API_KEY`         | 전시 | -                                             | 전시정보(통합). 화면이 요청할 때 읽는다          |
-| `EMUSEUM_SERVICE_KEY`     | 소장 | -                                             | e뮤지엄 소장품. 박물관 상세가 요청할 때 읽는다   |
-| `COLLECTOR_INGEST_SECRET` | 수집 | -                                             | 수집 API 비밀. 비어 있으면 거절한다              |
-| `BETTER_AUTH_SECRET`      | O    | -                                             | 세션 서명 비밀. 없으면 서버가 뜨지 않는다        |
-| `BETTER_AUTH_URL`         | X    | `http://localhost:3000`                       | 인증 메일 링크에 쓰는 API 주소                   |
-| `RESEND_API_KEY`          | O    | -                                             | 인증·재설정 메일. 없으면 서버가 뜨지 않는다      |
-| `RESEND_FROM`             | X    | `onboarding@resend.dev`                       | 보내는 주소. 도메인 인증 전에는 시험 발송만 된다 |
+| 변수                      | 필수 | 기본값                                        | 설명                                                                   |
+| ------------------------- | ---- | --------------------------------------------- | ---------------------------------------------------------------------- |
+| `DATABASE_URL`            | O    | -                                             | `postgresql://user:pass@host:5432/db`                                  |
+| `PORT`                    | X    | `3000`                                        | HTTP 포트                                                              |
+| `CORS_ORIGIN`             | X    | `*`                                           | 허용 오리진. 운영은 `https://dayplace.croffledev.kr`                   |
+| `DATABASE_POOL_MAX`       | X    | `10`                                          | pg 커넥션 풀 최대 크기                                                 |
+| `NODE_ENV`                | X    | -                                             | `development` / `production`                                           |
+| `TOUR_API_KEY`            | O    | -                                             | 한국관광공사 TourAPI (v0.1)                                            |
+| `TOUR_API_BASE_URL`       | X    | `https://apis.data.go.kr/B551011/KorService2` | TourAPI 베이스 URL                                                     |
+| `HERITAGE_API_BASE_URL`   | X    | -                                             | 국가유산청 API 베이스 (v0.2 상세)                                      |
+| `HERITAGE_API_KEY`        | X    | -                                             | 국가유산청이 키를 요구하면 추가                                        |
+| `CULTURE_API_KEY`         | 전시 | -                                             | 전시정보(통합). 화면이 요청할 때 읽는다                                |
+| `EMUSEUM_SERVICE_KEY`     | 소장 | -                                             | e뮤지엄 소장품. 박물관 상세가 요청할 때 읽는다                         |
+| `COLLECTOR_INGEST_SECRET` | 수집 | -                                             | 수집 API 비밀. 비어 있으면 거절한다                                    |
+| `BETTER_AUTH_SECRET`      | O    | -                                             | 세션 서명 비밀. 없으면 서버가 뜨지 않는다                              |
+| `BETTER_AUTH_URL`         | X    | `http://localhost:3000`                       | 인증 메일 링크의 API 주소. 운영은 `https://api.dayplace.croffledev.kr` |
+| `RESEND_API_KEY`          | O    | -                                             | 인증·재설정 메일. 없으면 서버가 뜨지 않는다                            |
+| `RESEND_FROM`             | X    | `onboarding@resend.dev`                       | 보내는 주소. 도메인 인증 전에는 시험 발송만 된다                       |
 
 예시:
 
