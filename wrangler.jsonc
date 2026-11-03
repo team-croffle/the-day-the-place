@@ -1,6 +1,6 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "the-day-the-place",
+  "name": "dayplace",
   "compatibility_date": "2026-11-03",
   "assets": {
     "directory": "./web/dist",
