@@ -4,6 +4,7 @@ on:
   workflow_dispatch:
   push:
     branches: [master, ci/ghcr-api-image]
+    tags: ['v*.*.*']
 
 permissions:
   contents: read
@@ -32,12 +33,18 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - id: version
+        run: echo "version=$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
+
       - id: meta
         uses: docker/metadata-action@v5
         with:
           images: ${{ env.IMAGE_NAME }}
           tags: |
             type=raw,value=latest,enable=${{ github.ref == 'refs/heads/master' || github.ref == 'refs/heads/ci/ghcr-api-image' }}
+            type=raw,value=${{ steps.version.outputs.version }},enable=${{ github.ref == 'refs/heads/master' || github.ref == 'refs/heads/ci/ghcr-api-image' }}
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
             type=sha,format=long
 
       - uses: docker/build-push-action@v6
