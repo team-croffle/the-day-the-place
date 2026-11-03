@@ -19,6 +19,11 @@ overrides:
   multer: 2.5.0
   brace-expansion@2: 2.1.7
   source-map-js: 1.2.2
+  # 4.2.0부터 나온 프로토타입 오염. 패치 릴리스가 없어 영향 범위 밖인 4.1.2로 내린다.
+  deepmerge: 4.1.2
+  esbuild: 0.28.2
+  minimatch: 11.0.4
+  glob: 14.0.3
 
 minimumReleaseAgeExclude:
   - '@oxfmt/binding-android-arm-eabi@0.66.0'
