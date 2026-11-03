@@ -28,8 +28,9 @@ RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
 
 # ------------------------------------------------------- 프로덕션 의존성만
 FROM manifests AS prod-deps
+# 루트 prepare는 husky다. 프로덕션 설치에는 그 패키지가 없어 스크립트를 실행하면 실패한다.
 RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
-    pnpm install --frozen-lockfile --prod --filter @nest-vue/server...
+    pnpm install --frozen-lockfile --prod --filter @nest-vue/server... --ignore-scripts
 
 # ------------------------------------------------------------------ build
 FROM deps AS build
