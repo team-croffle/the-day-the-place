@@ -23,7 +23,7 @@ services:
       context: ..
       dockerfile: docker/Dockerfile
       target: runner
-    image: nest-vue-server:${IMAGE_TAG:-latest}
+    image: ghcr.io/team-croffle/the-day-the-place:${IMAGE_TAG:-latest}
     restart: unless-stopped
     depends_on:
       postgres:
