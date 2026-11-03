@@ -1,6 +1,6 @@
 {
   "name": "nest-vue",
-  "version": "0.1.4",
+  "version": "0.1.4-rc.2",
   "private": true,
   "description": "NestJS + Vue 3 pnpm monorepo",
   "scripts": {
