@@ -22,7 +22,7 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  IMAGE_NAME: ghcr.io/the-day-the-place
+  IMAGE_NAME: ghcr.io/team-croffle/dayplace
 
 jobs:
   version:
