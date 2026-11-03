@@ -8,10 +8,6 @@
 
 네 덩어리다. `shared`가 가운데에서 타입과 상수를 대고, `server`와 `web`이 그것을 같이 쓴다.
 
-운영에서는 `dayplace.croffledev.kr`의 Cloudflare Worker가 화면을 제공한다.
-`/api`와 `/api/*`는 `worker/index.mjs`가 홈랩의 `https://api.dayplace.croffledev.kr`로
-경로를 유지해 전달한다. 나머지는 `ASSETS` 바인딩으로 정적 파일과 SPA 폴백을 제공한다.
-
 ```
 사용자 ─→ web (Vue 3 + Vite, :5173)
              │  fetch /api/...   (개발 중에는 vite proxy → :3000)
@@ -37,8 +33,6 @@
 ```
 the-day-the-place/
 ├─ AGENTS.md                에이전트 운영 규칙
-├─ wrangler.jsonc           정적 파일·SPA 폴백·API 우선 실행 설정
-├─ worker/index.mjs         운영 /api 프록시, 나머지는 ASSETS로 전달
 ├─ .ai/                     에이전트가 보는 로컬 자료. .gitignore
 │  ├─ ROADMAP.md            내부 로드맵 (버전별 계획)
 │  ├─ DEPLOY.md             Netlify · Docker · Modal 배포 메모
@@ -255,10 +249,6 @@ DB에 남는 수집 결과는 추출된 전시 행과 출처별 마지막 글 �
   "여기 장소가 없음"과 "호출이 깨짐"을 화면이 구분할 수 있게 하려는 것이다.
 
 ## 짝을 맞춰 둬야 하는 곳
-
-운영 웹의 `VITE_API_BASE_URL=/api`, 서버의 `CORS_ORIGIN`과 `BETTER_AUTH_URL`은
-`https://dayplace.croffledev.kr` 기준이다. Worker의 백엔드 호스트와 홈랩 공개 호스트는
-`api.dayplace.croffledev.kr`로 맞춘다. 실제 연결과 로그인 검증은 홈랩 배포 후 필요하다.
 
 | 한쪽                             | 다른쪽                                                                | 무엇이 깨지나                                  |
 | -------------------------------- | --------------------------------------------------------------------- | ---------------------------------------------- |
