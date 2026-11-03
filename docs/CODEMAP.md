@@ -205,21 +205,22 @@ DB에 남는 수집 결과는 추출된 전시 행과 출처별 마지막 글 �
 
 ## 루트 도구와 인프라
 
-| 경로                                                   | 역할                                                                                              | 연관                                       |
-| ------------------------------------------------------ | ------------------------------------------------------------------------------------------------- | ------------------------------------------ |
-| `package.json`                                         | 워크스페이스 루트. 모든 스크립트가 pnpm 필터나 `uv --directory collector`로 퍼진다                | 아래 스크립트 표                           |
-| `pnpm-workspace.yaml`                                  | 워크스페이스는 `shared`·`server`·`web` 셋. collector는 포함되지 않는다                            | typescript 버전을 catalog로 고정           |
-| `tsconfig.base.json`                                   | strict 기반 설정. 세 패키지가 상속한다                                                            | 각 패키지 tsconfig                         |
-| `.oxlintrc.json`, `.oxfmtrc.json`                      | 린트·포맷 한 쌍. ESLint·Prettier를 쓰지 않는다. 서버는 kebab-case 파일명, 웹은 camel/Pascal       | `pnpm lint`, `format:check`, lint-staged   |
-| `.lintstagedrc.json`, `.husky/pre-commit`              | 커밋 직전 JS/TS/Vue는 oxlint+oxfmt, Python은 ruff                                                 | CI는 `HUSKY: 0`으로 끈다                   |
-| `.github/PULL_REQUEST_TEMPLATE.md`                     | PR 본문 칸. 요약, 변경 사항, 테스트, 메모                                                         | master로 여는 PR에 붙는다                  |
-| `.github/labeler.yml`, `.github/workflows/labeler.yml` | PR에서 바뀐 경로로 `server` `web` `shared` `collector` 라벨을 붙인다. `sync-labels: true`         | `actions/labeler@v7`. master로 향하는 PR만 |
-| `.github/workflows/ci.yml`                             | 푸시·PR에서 install → lint → format:check → typecheck → test. Node 22, pnpm은 `packageManager` 값 | Python 검사는 CI에 없다                    |
-| `.cursor/commands/review.md`                           | 커밋 전 리뷰 절차. 보안, 제품 계약, 정합성, 명세, 구조, 이름. 문제는 보고만 한다                  | `AGENTS.md`「리뷰」가 이 파일을 시킨다     |
-| `docker/docker-compose.dev.yaml`                       | 개발용. Postgres 18 + Adminer를 띄운다. 서버는 `server` 프로파일이라 기본으로 안 뜬다             | `pnpm docker:dev`                          |
-| `docker/docker-compose.yaml`                           | 배포용. Postgres(포트 미공개) + 서버 runner 이미지                                                | `pnpm docker:prod`                         |
-| `docker/Dockerfile`                                    | 서버 멀티스테이지 빌드. runner에 `/api/health` 헬스체크                                           | 컨텍스트는 저장소 루트                     |
-| `README.md`, `ROADMAP.md`                              | 공개용 안내와 공개 로드맵                                                                         | 패키지별 README 3개로 이어진다             |
+| 경로                                                   | 역할                                                                                                        | 연관                                       |
+| ------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------- | ------------------------------------------ |
+| `package.json`                                         | 워크스페이스 루트. 모든 스크립트가 pnpm 필터나 `uv --directory collector`로 퍼진다                          | 아래 스크립트 표                           |
+| `pnpm-workspace.yaml`                                  | 워크스페이스는 `shared`·`server`·`web` 셋. collector는 포함되지 않는다                                      | typescript 버전을 catalog로 고정           |
+| `tsconfig.base.json`                                   | strict 기반 설정. 세 패키지가 상속한다                                                                      | 각 패키지 tsconfig                         |
+| `.oxlintrc.json`, `.oxfmtrc.json`                      | 린트·포맷 한 쌍. ESLint·Prettier를 쓰지 않는다. 서버는 kebab-case 파일명, 웹은 camel/Pascal                 | `pnpm lint`, `format:check`, lint-staged   |
+| `.lintstagedrc.json`, `.husky/pre-commit`              | 커밋 직전 JS/TS/Vue는 oxlint+oxfmt, Python은 ruff                                                           | CI는 `HUSKY: 0`으로 끈다                   |
+| `.github/PULL_REQUEST_TEMPLATE.md`                     | PR 본문 칸. 요약, 변경 사항, 테스트, 메모                                                                   | master로 여는 PR에 붙는다                  |
+| `.github/labeler.yml`, `.github/workflows/labeler.yml` | PR에서 바뀐 경로로 `server` `web` `shared` `collector` 라벨을 붙인다. `sync-labels: true`                   | `actions/labeler@v7`. master로 향하는 PR만 |
+| `.github/workflows/ci.yml`                             | 푸시·PR에서 install → lint → format:check → typecheck → test. Node 22, pnpm은 `packageManager` 값           | Python 검사는 CI에 없다                    |
+| `.github/workflows/release.yml`                        | master와 `ci/ghcr-api-image` 푸시, 수동 실행에서 API 이미지를 GHCR에 올린다. `docker/Dockerfile`의 `runner` | `ghcr.io/team-croffle/the-day-the-place`   |
+| `.cursor/commands/review.md`                           | 커밋 전 리뷰 절차. 보안, 제품 계약, 정합성, 명세, 구조, 이름. 문제는 보고만 한다                            | `AGENTS.md`「리뷰」가 이 파일을 시킨다     |
+| `docker/docker-compose.dev.yaml`                       | 개발용. Postgres 18 + Adminer를 띄운다. 서버는 `server` 프로파일이라 기본으로 안 뜬다                       | `pnpm docker:dev`                          |
+| `docker/docker-compose.yaml`                           | 배포용. Postgres(포트 미공개) + GHCR의 API 이미지. `up --build`는 그 머신에서 다시 만든다                   | `pnpm docker:prod`                         |
+| `docker/Dockerfile`                                    | 서버 멀티스테이지 빌드. runner에 `/api/health` 헬스체크                                                     | 컨텍스트는 저장소 루트                     |
+| `README.md`, `ROADMAP.md`                              | 공개용 안내와 공개 로드맵                                                                                   | 패키지별 README 3개로 이어진다             |
 
 자주 쓰는 루트 스크립트: `pnpm dev`(서버+웹 동시), `pnpm docker:dev`(DB), `pnpm db:push`,
 `pnpm lint` / `format:check` / `typecheck` / `test`(CI와 같은 네 개), `*:py`(collector 쪽).
