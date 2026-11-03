@@ -15,7 +15,7 @@
     "@nest-vue/shared": "workspace:*",
     "better-auth": "^1.7.13",
     "vue": "^3.5.42",
-    "vue-i18n": "^11.4.10",
+    "vue-i18n": "^11.4.17",
     "vue-router": "^5.3.1"
   },
   "devDependencies": {
@@ -24,7 +24,7 @@
     "@vitejs/plugin-vue": "^6.0.8",
     "tailwindcss": "^4.3.3",
     "typescript": "catalog:",
-    "vite": "^8.2.2",
+    "vite": "^8.3.5",
     "vite-plugin-vue-devtools": "^8.2.1",
     "vue-tsc": "^3.3.11"
   }
