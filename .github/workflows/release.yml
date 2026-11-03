@@ -1,29 +1,127 @@
-name: API image
+# API 이미지 릴리즈 (GHCR) + GitHub Release 초안
+#
+# Actions에서 이 워크플로를 실행하고 버전을 적는다. master 푸시만으로는 이미지가 바뀌지 않는다.
+# 순서: package.json을 그 버전으로 커밋하고 git 태그 → GHCR 푸시 → 초안 릴리즈.
+
+name: API release
 
 on:
   workflow_dispatch:
-  push:
-    branches: [master, ci/ghcr-api-image]
-    tags: ['v*.*.*']
+    inputs:
+      version:
+        description: '앞에 v 없이 적는 버전. 예: 0.1.0'
+        required: true
+        type: string
 
 permissions:
-  contents: read
+  contents: write
   packages: write
 
 concurrency:
-  group: api-image-${{ github.ref }}
+  group: api-release-${{ github.ref }}
   cancel-in-progress: false
 
 env:
   IMAGE_NAME: ghcr.io/${{ github.repository }}
 
 jobs:
+  version:
+    name: Commit version
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      version: ${{ steps.calc.outputs.version }}
+      tag: ${{ steps.calc.outputs.tag }}
+      ref: ${{ steps.commit.outputs.ref }}
+      is_prerelease: ${{ steps.calc.outputs.is_prerelease }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: master에서만
+        if: github.ref != 'refs/heads/master'
+        run: |
+          echo "::error::API 릴리즈는 master에서만 실행한다."
+          exit 1
+
+      - id: calc
+        shell: bash
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          NEXT="${INPUT_VERSION#v}"
+          if [[ ! "$NEXT" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$ ]]; then
+            echo "::error::버전 형식이 아니다: ${INPUT_VERSION}"
+            exit 1
+          fi
+          IS_PRE=false
+          if [[ "$NEXT" == *-* ]]; then
+            IS_PRE=true
+          fi
+          TAG="v${NEXT}"
+          if git ls-remote --tags origin "refs/tags/${TAG}" | grep -q .; then
+            echo "::error::태그 ${TAG}가 이미 있다."
+            exit 1
+          fi
+          {
+            echo "version=${NEXT}"
+            echo "tag=${TAG}"
+            echo "is_prerelease=${IS_PRE}"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: package.json 버전
+        shell: bash
+        env:
+          NEW_VERSION: ${{ steps.calc.outputs.version }}
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const fs = require('fs');
+          const version = process.env.NEW_VERSION;
+          const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+          pkg.version = version;
+          fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');
+          NODE
+
+      - id: commit
+        shell: bash
+        env:
+          NEW_VERSION: ${{ steps.calc.outputs.version }}
+          TAG: ${{ steps.calc.outputs.tag }}
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package.json
+          if ! git diff --cached --quiet; then
+            git commit -m "release: v${NEW_VERSION}"
+            for attempt in 1 2 3; do
+              if git push origin "HEAD:${GITHUB_REF_NAME}"; then
+                break
+              fi
+              if [[ $attempt -eq 3 ]]; then
+                echo "branch push failed after 3 attempts" >&2
+                exit 1
+              fi
+              git pull --rebase origin "${GITHUB_REF_NAME}"
+            done
+          fi
+          git tag "$TAG"
+          git push origin "$TAG"
+          echo "ref=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
   publish:
-    name: Push GHCR
+    name: Push GHCR and draft release
+    needs: version
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
+        with:
+          ref: ${{ needs.version.outputs.ref }}
 
       - uses: docker/setup-buildx-action@v3
 
@@ -33,19 +131,14 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - id: version
-        run: echo "version=$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
-
       - id: meta
         uses: docker/metadata-action@v5
         with:
           images: ${{ env.IMAGE_NAME }}
           tags: |
-            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/master' || github.ref == 'refs/heads/ci/ghcr-api-image' }}
-            type=raw,value=${{ steps.version.outputs.version }},enable=${{ github.ref == 'refs/heads/master' || github.ref == 'refs/heads/ci/ghcr-api-image' }}
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=sha,format=long
+            type=raw,value=${{ needs.version.outputs.version }}
+            type=raw,value=${{ needs.version.outputs.tag }}
+            type=raw,value=latest,enable=${{ needs.version.outputs.is_prerelease == 'false' }}
 
       - uses: docker/build-push-action@v6
         with:
@@ -57,3 +150,26 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      - name: 초안 릴리즈
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ needs.version.outputs.tag }}
+          VERSION: ${{ needs.version.outputs.version }}
+          IS_PRE: ${{ needs.version.outputs.is_prerelease }}
+          IMAGE: ${{ env.IMAGE_NAME }}
+        run: |
+          set -euo pipefail
+          NOTES="$(cat <<EOF
+          이미지: \`${IMAGE}:${VERSION}\`
+
+          \`\`\`sh
+          docker pull ${IMAGE}:${VERSION}
+          \`\`\`
+          EOF
+          )"
+          ARGS=(--draft --title "$TAG" --notes "$NOTES")
+          if [[ "$IS_PRE" == "true" ]]; then
+            ARGS+=(--prerelease)
+          fi
+          gh release create "$TAG" "${ARGS[@]}" --repo "$GITHUB_REPOSITORY"
