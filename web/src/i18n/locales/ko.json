@@ -23,6 +23,8 @@
     "heroNext": "다음 특별전",
     "heroSlides": "배너 특별전",
     "heroSlide": "{title}",
+    "heroMore": "› 더보기",
+    "heroLess": "› 접기",
     "search": "검색",
     "searchPlaceholder": "박물관, 유적지, 특별전 검색…",
     "exhibitionsEyebrow": "Current exhibitions",
