@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { API_ROUTES, type Exhibition } from '@nest-vue/shared';
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { RouterLink } from 'vue-router';
 
@@ -40,6 +40,24 @@ const slides = computed(() =>
     .slice(0, HERO_LIMIT),
 );
 const featured = computed(() => slides.value[slideIndex.value] ?? null);
+const expanded = ref(false);
+const titleEl = ref<HTMLElement | null>(null);
+const summaryEl = ref<HTMLElement | null>(null);
+const overflow = ref(false);
+
+watch(featured, () => {
+  expanded.value = false;
+  void measureClamp();
+});
+
+async function measureClamp(): Promise<void> {
+  await nextTick();
+  overflow.value = isClamped(titleEl.value) || isClamped(summaryEl.value);
+}
+
+function isClamped(node: HTMLElement | null): boolean {
+  return !!node && node.scrollHeight > node.clientHeight + 1;
+}
 
 watch(slides, (list) => {
   if (slideIndex.value >= list.length) slideIndex.value = 0;
@@ -105,7 +123,8 @@ const eras = [
 <template>
   <div>
     <section
-      class="bg-ink text-paper relative min-h-[28rem] overflow-hidden"
+      class="bg-ink text-paper relative overflow-hidden"
+      :class="expanded ? 'min-h-[28rem]' : 'h-[28rem]'"
       @pointerenter="holdHero"
       @pointerleave="releaseHero"
       @focusin="holdHero"
@@ -130,17 +149,35 @@ const eras = [
         aria-hidden="true"
       />
       <div
-        class="relative mx-auto flex min-h-[28rem] max-w-6xl flex-col justify-end px-6 pt-16 pb-24"
+        class="relative mx-auto flex max-w-6xl flex-col justify-end px-6 pt-16 pb-24"
+        :class="expanded ? 'min-h-[28rem]' : 'h-full'"
       >
         <p class="text-gold text-xs tracking-widest uppercase">
           {{ featured ? t(`exhibitions.status.${featured.status}`) : t('home.heroEyebrow') }}
         </p>
-        <h1 class="mt-3 max-w-xl text-3xl font-semibold sm:text-4xl">
+        <h1
+          ref="titleEl"
+          class="mt-3 max-w-xl text-3xl font-semibold sm:text-4xl"
+          :class="expanded ? '' : 'line-clamp-2'"
+        >
           {{ featured ? featured.title : t('home.heroTitle') }}
         </h1>
-        <p class="text-paper/80 mt-3 max-w-lg text-sm">
+        <p
+          ref="summaryEl"
+          class="text-paper/80 mt-3 max-w-lg text-sm"
+          :class="expanded ? '' : 'line-clamp-3'"
+        >
           {{ featured ? featured.summary : t('home.heroBody') }}
         </p>
+        <button
+          v-if="overflow || expanded"
+          type="button"
+          class="text-paper/80 hover:text-paper mt-3 w-fit text-sm"
+          :aria-expanded="expanded"
+          @click="expanded = !expanded"
+        >
+          {{ expanded ? t('home.heroLess') : t('home.heroMore') }}
+        </button>
         <div class="mt-6 flex flex-wrap items-center gap-3">
           <RouterLink
             :to="featured ? `/exhibitions/${featured.id}` : '/exhibitions'"
