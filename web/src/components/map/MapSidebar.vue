@@ -12,6 +12,7 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { RouterLink } from 'vue-router';
 
+import Skeleton from '@/components/Skeleton.vue';
 import { apiUrl } from '@/composables/useApi';
 
 const ITEM_H = 84;
@@ -28,6 +29,7 @@ const props = defineProps<{
   count: number;
   selectedId: string | null;
   searching: boolean;
+  pending: boolean;
   relics: Paginated<RelicSearchHit> | null;
   relicsPending: boolean;
   relicsError: string | null;
@@ -141,8 +143,8 @@ onBeforeUnmount(() => {
       <div class="grid grid-cols-2 gap-1">
         <button
           type="button"
-          class="rounded-sm px-2 py-2 text-sm font-medium"
-          :class="kinds.museum ? 'bg-ink text-paper' : 'border-line text-muted border bg-white'"
+          class="rounded-sm border px-2 py-2 text-sm font-medium"
+          :class="kinds.museum ? 'border-ink bg-ink text-paper' : 'border-line text-muted bg-white'"
           :aria-pressed="kinds.museum"
           @click="toggleKind('museum')"
         >
@@ -150,8 +152,12 @@ onBeforeUnmount(() => {
         </button>
         <button
           type="button"
-          class="rounded-sm px-2 py-2 text-sm font-medium"
-          :class="kinds.site ? 'text-paper bg-[#6b4f2a]' : 'border-line text-muted border bg-white'"
+          class="rounded-sm border px-2 py-2 text-sm font-medium"
+          :class="
+            kinds.site
+              ? 'text-paper border-[#6b4f2a] bg-[#6b4f2a]'
+              : 'border-line text-muted bg-white'
+          "
           :aria-pressed="kinds.site"
           @click="toggleKind('site')"
         >
@@ -207,9 +213,11 @@ onBeforeUnmount(() => {
 
     <section v-if="relicQuery" class="border-line shrink-0 border-b px-4 py-3">
       <h2 class="sr-only">{{ t('map.relicsTitle') }}</h2>
-      <p v-if="relicsPending && !relics" class="text-muted mt-2 text-xs">
-        {{ t('map.relicsLoading') }}
-      </p>
+      <div v-if="relicsPending && !relics" class="mt-2 space-y-2" aria-busy="true">
+        <p class="sr-only">{{ t('map.relicsLoading') }}</p>
+        <Skeleton class="h-12" />
+        <Skeleton class="h-12" />
+      </div>
       <p v-else-if="relicsError" class="mt-2 text-xs" role="alert">{{ t('map.relicsError') }}</p>
       <p v-else-if="!relics || relics.items.length === 0" class="text-muted mt-2 text-xs">
         {{ t('map.relicsEmpty') }}
@@ -264,7 +272,11 @@ onBeforeUnmount(() => {
     </section>
 
     <ul ref="scroller" class="min-h-0 flex-1 overflow-y-auto" @scroll.passive="onScroll">
-      <li v-if="items.length === 0" class="text-muted px-4 py-6 text-sm">
+      <li v-if="pending && items.length === 0" class="space-y-3 px-4 py-4" aria-busy="true">
+        <p class="sr-only">{{ t('map.loading') }}</p>
+        <Skeleton v-for="n in 6" :key="n" class="h-14" />
+      </li>
+      <li v-else-if="items.length === 0" class="text-muted px-4 py-6 text-sm">
         {{ searching ? t('map.emptySearch') : t('map.emptyList') }}
       </li>
       <template v-else>

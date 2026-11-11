@@ -4,6 +4,10 @@
     "tagline": "The Day, The Place",
     "description": "Historic sites and special exhibitions in one place"
   },
+  "font": {
+    "decrease": "Smaller text",
+    "increase": "Larger text"
+  },
   "nav": {
     "map": "Map",
     "museums": "Museums",
@@ -79,6 +83,8 @@
     "empty": "No places match.",
     "prev": "Previous",
     "next": "Next",
+    "pages": "Pages",
+    "page": "Page {page}",
     "favoriteSave": "Mark interest",
     "favoriteUnsave": "Remove interest",
     "favoriteCount": "{n} interested",

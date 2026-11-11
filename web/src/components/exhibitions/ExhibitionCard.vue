@@ -1,16 +1,27 @@
 <script setup lang="ts">
 import type { Exhibition } from '@nest-vue/shared';
+import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { RouterLink } from 'vue-router';
 
+import BrandMark from '@/components/BrandMark.vue';
 import { exhibitionPeriod } from '@/lib/exhibitionPeriod';
 
-defineProps<{
+const props = defineProps<{
   exhibition: Exhibition;
   featured?: boolean;
 }>();
 
 const { t } = useI18n();
+const broken = ref(false);
+const showImage = computed(() => Boolean(props.exhibition.imageUrl) && !broken.value);
+
+watch(
+  () => props.exhibition.imageUrl,
+  () => {
+    broken.value = false;
+  },
+);
 </script>
 
 <template>
@@ -21,14 +32,18 @@ const { t } = useI18n();
   >
     <div class="bg-line relative" :class="featured ? 'min-h-56 sm:min-h-72' : 'h-40'">
       <img
-        v-if="exhibition.imageUrl"
-        :src="exhibition.imageUrl"
+        v-if="showImage"
+        :src="exhibition.imageUrl!"
         :alt="exhibition.title"
         loading="lazy"
         decoding="async"
         class="absolute inset-0 h-full w-full object-cover"
+        @error="broken = true"
       />
-      <span class="bg-ink/80 text-paper absolute top-3 left-3 rounded-sm px-2 py-0.5 text-[11px]">
+      <BrandMark v-else class="absolute inset-0" />
+      <span
+        class="bg-ink/80 text-paper absolute top-3 left-3 z-10 rounded-sm px-2 py-0.5 text-[11px]"
+      >
         {{ t(`exhibitions.status.${exhibition.status}`) }}
       </span>
     </div>

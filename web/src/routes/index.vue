@@ -4,8 +4,10 @@ import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { RouterLink } from 'vue-router';
 
+import BrandMark from '@/components/BrandMark.vue';
 import ExhibitionCard from '@/components/exhibitions/ExhibitionCard.vue';
 import HomeSearch from '@/components/home/HomeSearch.vue';
+import Skeleton from '@/components/Skeleton.vue';
 import { apiFetch } from '@/composables/useApi';
 
 const HERO_LIMIT = 5;
@@ -130,6 +132,13 @@ const eras = [
       @focusin="holdHero"
       @focusout="releaseHero"
     >
+      <div
+        v-if="!exhibitionsPending && !featured?.imageUrl"
+        class="pointer-events-none absolute inset-y-8 right-6 hidden w-72 sm:block"
+        aria-hidden="true"
+      >
+        <BrandMark class="rounded-md" />
+      </div>
       <div v-if="featured?.imageUrl" class="pointer-events-none absolute inset-0">
         <div class="relative mx-auto h-full max-w-6xl">
           <img
@@ -234,7 +243,18 @@ const eras = [
           {{ t('home.seeAll') }}
         </RouterLink>
       </div>
-      <p v-if="exhibitionsPending" class="text-muted text-sm">{{ t('home.exhibitionsLoading') }}</p>
+      <div v-if="exhibitionsPending" aria-busy="true">
+        <p class="sr-only">{{ t('home.exhibitionsLoading') }}</p>
+        <ul class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <li v-for="n in 4" :key="n" class="bg-paper overflow-hidden rounded-md shadow-sm">
+            <Skeleton class="h-40" />
+            <div class="space-y-2 p-4">
+              <Skeleton class="h-4 w-3/4" />
+              <Skeleton class="h-3 w-1/2" />
+            </div>
+          </li>
+        </ul>
+      </div>
       <p v-else-if="ongoing.length === 0" class="text-muted text-sm">
         {{ t('exhibitions.empty') }}
       </p>
