@@ -4,7 +4,9 @@ import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { RouterLink } from 'vue-router';
 
+import PageNav from '@/components/PageNav.vue';
 import PlaceCard from '@/components/places/PlaceCard.vue';
+import Skeleton from '@/components/Skeleton.vue';
 import { useFavoriteMarks, type FavoriteTargetView } from '@/composables/useFavoriteMarks';
 import { usePlaceList } from '@/composables/usePlaceList';
 
@@ -107,7 +109,18 @@ const totalPages = computed(() => result.value?.totalPages ?? 0);
         </div>
       </div>
 
-      <p v-if="pending" class="text-muted mt-8 text-sm">{{ t('places.loading') }}</p>
+      <div v-if="pending" class="mt-8" aria-busy="true">
+        <p class="sr-only">{{ t('places.loading') }}</p>
+        <ul class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <li v-for="n in 6" :key="n" class="bg-paper overflow-hidden rounded-md shadow-sm">
+            <Skeleton class="h-40" />
+            <div class="space-y-2 p-4">
+              <Skeleton class="h-4 w-3/4" />
+              <Skeleton class="h-3 w-1/2" />
+            </div>
+          </li>
+        </ul>
+      </div>
       <p v-else-if="error" class="mt-8 text-sm" role="alert">{{ error }}</p>
       <p v-else-if="items.length === 0" class="text-muted mt-8 text-sm">{{ t('places.empty') }}</p>
       <ul v-else class="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -124,25 +137,7 @@ const totalPages = computed(() => result.value?.totalPages ?? 0);
         </li>
       </ul>
 
-      <div v-if="totalPages > 1" class="mt-8 flex items-center justify-center gap-3 text-sm">
-        <button
-          type="button"
-          class="border-line rounded-sm border px-3 py-1 disabled:opacity-40"
-          :disabled="page <= 1 || pending"
-          @click="page -= 1"
-        >
-          {{ t('places.prev') }}
-        </button>
-        <span class="text-muted">{{ page }} / {{ totalPages }}</span>
-        <button
-          type="button"
-          class="border-line rounded-sm border px-3 py-1 disabled:opacity-40"
-          :disabled="page >= totalPages || pending"
-          @click="page += 1"
-        >
-          {{ t('places.next') }}
-        </button>
-      </div>
+      <PageNav v-model="page" :total-pages="totalPages" :pending="pending" />
     </div>
   </div>
 </template>

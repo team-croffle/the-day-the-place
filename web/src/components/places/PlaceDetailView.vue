@@ -15,6 +15,7 @@ import { RouterLink } from 'vue-router';
 
 import ExhibitionCard from '@/components/exhibitions/ExhibitionCard.vue';
 import FavoriteControl from '@/components/places/FavoriteControl.vue';
+import Skeleton from '@/components/Skeleton.vue';
 import { ApiError, apiFetch, apiUrl } from '@/composables/useApi';
 import { useFavoriteMarks } from '@/composables/useFavoriteMarks';
 
@@ -254,9 +255,14 @@ watch(
 
 <template>
   <div>
-    <p v-if="pending" class="text-muted mx-auto max-w-6xl px-6 py-16 text-sm">
-      {{ t('places.loading') }}
-    </p>
+    <div v-if="pending" aria-busy="true">
+      <p class="sr-only">{{ t('places.loading') }}</p>
+      <Skeleton class="h-72" />
+      <div class="mx-auto max-w-6xl space-y-3 px-6 py-10">
+        <Skeleton class="h-4 w-2/3" />
+        <Skeleton class="h-4 w-1/2" />
+      </div>
+    </div>
     <div v-else-if="error" class="mx-auto max-w-6xl px-6 py-16">
       <p role="alert">{{ error }}</p>
       <RouterLink :to="listPath" class="text-gold mt-4 inline-block text-sm">

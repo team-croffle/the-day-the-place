@@ -3,6 +3,8 @@ import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { RouterLink, useRoute, useRouter } from 'vue-router';
 
+import AppIcon from '@/components/AppIcon.vue';
+import FontSizeControl from '@/components/FontSizeControl.vue';
 import LocaleSwitcher from '@/components/LocaleSwitcher.vue';
 import { PRIMARY_NAV } from '@/constants/nav';
 import { authClient } from '@/lib/authClient';
@@ -21,6 +23,13 @@ const isAdmin = computed(() => {
 async function logout(): Promise<void> {
   await authClient.signOut();
   await router.push('/');
+}
+
+function navIcon(to: string): 'map' | 'museum' | 'site' | 'exhibition' {
+  if (to === '/museums') return 'museum';
+  if (to === '/sites') return 'site';
+  if (to === '/exhibitions') return 'exhibition';
+  return 'map';
 }
 </script>
 
@@ -43,24 +52,31 @@ async function logout(): Promise<void> {
         </span>
       </RouterLink>
 
-      <nav class="flex flex-1 items-center gap-6 text-sm">
+      <nav class="flex flex-1 items-center gap-3 text-sm md:gap-6">
         <RouterLink
           v-for="item in PRIMARY_NAV"
           :key="item.to"
           :to="item.to"
-          class="text-paper/80 hover:text-paper border-b-2 border-transparent py-1"
+          class="text-paper/80 hover:text-paper inline-flex items-center gap-1.5 border-b-2 border-transparent py-1"
           active-class="!border-gold !text-gold"
+          :aria-label="t(item.key)"
         >
-          {{ t(item.key) }}
+          <AppIcon :name="navIcon(item.to)" />
+          <span class="hidden md:inline">{{ t(item.key) }}</span>
         </RouterLink>
       </nav>
 
       <div class="flex items-center gap-3">
+        <FontSizeControl />
         <LocaleSwitcher />
         <template v-if="!session.isPending && session.data">
           <div v-if="isAdmin" class="account-menu">
-            <span class="text-sm" :class="onAccount ? 'text-gold' : 'text-paper'">
-              {{ session.data.user.name }}
+            <span
+              class="inline-flex items-center gap-1.5 text-sm"
+              :class="onAccount ? 'text-gold' : 'text-paper'"
+            >
+              <AppIcon name="user" />
+              <span class="hidden md:inline">{{ session.data.user.name }}</span>
             </span>
             <div class="account-panel">
               <div class="account-list">
@@ -80,24 +96,39 @@ async function logout(): Promise<void> {
           <RouterLink
             v-else
             to="/me"
-            class="hover:text-gold hidden text-sm sm:inline"
+            class="hover:text-gold inline-flex items-center gap-1.5 text-sm"
             :class="onMe ? 'text-gold' : 'text-paper'"
+            :aria-label="t('nav.myPage')"
           >
-            {{ session.data.user.name }}
+            <AppIcon name="user" />
+            <span class="hidden md:inline">{{ session.data.user.name }}</span>
           </RouterLink>
-          <button type="button" class="text-paper hover:text-gold text-sm" @click="logout">
-            {{ t('auth.logout') }}
+          <button
+            type="button"
+            class="text-paper hover:text-gold inline-flex items-center gap-1.5 text-sm"
+            :aria-label="t('auth.logout')"
+            @click="logout"
+          >
+            <AppIcon name="logout" />
+            <span class="hidden sm:inline">{{ t('auth.logout') }}</span>
           </button>
         </template>
         <template v-else-if="!session.isPending">
-          <RouterLink to="/login" class="text-paper hover:text-gold hidden text-sm sm:inline">
-            {{ t('nav.login') }}
+          <RouterLink
+            to="/login"
+            class="text-paper hover:text-gold inline-flex items-center gap-1.5 text-sm"
+            :aria-label="t('nav.login')"
+          >
+            <AppIcon name="login" />
+            <span class="hidden sm:inline">{{ t('nav.login') }}</span>
           </RouterLink>
           <RouterLink
             to="/signup"
-            class="bg-gold text-ink hover:bg-gold-hover rounded-sm px-3 py-1.5 text-sm font-medium"
+            class="bg-gold text-ink hover:bg-gold-hover inline-flex items-center gap-1.5 rounded-sm px-3 py-1.5 text-sm font-medium"
+            :aria-label="t('nav.signup')"
           >
-            {{ t('nav.signup') }}
+            <AppIcon name="signup" />
+            <span class="hidden sm:inline">{{ t('nav.signup') }}</span>
           </RouterLink>
         </template>
       </div>

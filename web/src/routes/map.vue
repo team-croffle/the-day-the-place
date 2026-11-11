@@ -257,6 +257,7 @@ function onClearSelect(): void {
       :count="filteredPlaces.length"
       :selected-id="selectedId"
       :searching="hasQuery"
+      :pending="pending"
       :relics="relicHits"
       :relics-pending="relicHitsPending"
       :relics-error="relicHitsError"
@@ -301,12 +302,6 @@ function onClearSelect(): void {
         class="bg-ink text-paper pointer-events-none absolute top-4 left-1/2 z-20 -translate-x-1/2 rounded-sm px-3 py-2 text-xs"
       >
         {{ t('map.fetchError') }}
-      </p>
-      <p
-        v-else-if="pending && places.length === 0"
-        class="bg-ink/80 text-paper pointer-events-none absolute top-4 left-1/2 z-20 -translate-x-1/2 rounded-sm px-3 py-2 text-xs"
-      >
-        {{ t('map.loading') }}
       </p>
     </div>
     <Transition name="map-preview">

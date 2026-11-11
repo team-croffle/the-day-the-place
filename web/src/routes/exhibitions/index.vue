@@ -11,6 +11,7 @@ import { useI18n } from 'vue-i18n';
 import { RouterLink } from 'vue-router';
 
 import ExhibitionCard from '@/components/exhibitions/ExhibitionCard.vue';
+import Skeleton from '@/components/Skeleton.vue';
 import { apiFetch } from '@/composables/useApi';
 
 const { t } = useI18n();
@@ -123,7 +124,18 @@ const upcomingTotal = computed(
         </div>
       </div>
 
-      <p v-if="pending" class="text-muted mt-8 text-sm">{{ t('exhibitions.loading') }}</p>
+      <div v-if="pending" class="mt-8" aria-busy="true">
+        <p class="sr-only">{{ t('exhibitions.loading') }}</p>
+        <ul class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <li v-for="n in 6" :key="n" class="bg-paper overflow-hidden rounded-md shadow-sm">
+            <Skeleton class="h-40" />
+            <div class="space-y-2 p-4">
+              <Skeleton class="h-4 w-3/4" />
+              <Skeleton class="h-3 w-1/2" />
+            </div>
+          </li>
+        </ul>
+      </div>
       <p v-else-if="error" class="mt-8 text-sm" role="alert">{{ error }}</p>
       <p v-else-if="filtered.length === 0" class="text-muted mt-8 text-sm">
         {{ t('exhibitions.empty') }}

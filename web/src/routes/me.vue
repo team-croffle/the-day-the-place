@@ -4,6 +4,7 @@ import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { RouterLink, useRouter } from 'vue-router';
 
+import Skeleton from '@/components/Skeleton.vue';
 import { apiFetch } from '@/composables/useApi';
 import { authClient } from '@/lib/authClient';
 import { placeDetailPath } from '@/lib/placePath';
@@ -75,9 +76,12 @@ async function logout(): Promise<void> {
 </script>
 
 <template>
-  <p v-if="session.isPending" class="text-muted mx-auto max-w-6xl px-6 py-16 text-sm">
-    {{ t('me.loading') }}
-  </p>
+  <div v-if="session.isPending" class="mx-auto max-w-6xl space-y-3 px-6 py-16" aria-busy="true">
+    <p class="sr-only">{{ t('me.loading') }}</p>
+    <Skeleton class="h-8 w-40" />
+    <Skeleton class="h-4 w-64" />
+    <Skeleton class="h-24" />
+  </div>
 
   <div v-else-if="user">
     <section class="bg-ink text-paper">
