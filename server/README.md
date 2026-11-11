@@ -58,7 +58,7 @@ HERITAGE_API_BASE_URL=http://www.khs.go.kr/cha
 
 ```bash
 pnpm db:generate   # 스키마 변경 → SQL 마이그레이션 생성 (server/drizzle)
-pnpm db:migrate    # 마이그레이션 적용
+pnpm db:migrate    # 마이그레이션 적용. 서버 기동도 같은 SQL을 한 번 적용한다
 pnpm db:push       # 마이그레이션 파일 없이 스키마 직접 반영 (로컬 전용)
 pnpm db:studio     # Drizzle Studio
 ```

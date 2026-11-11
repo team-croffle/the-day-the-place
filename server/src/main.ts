@@ -6,10 +6,13 @@ import { NestFactory } from '@nestjs/core';
 import { toNodeHandler } from 'better-auth/node';
 import type { NextFunction, Request, Response } from 'express';
 import { json, urlencoded } from 'express';
+import type { Pool } from 'pg';
 
 import { AppModule } from './app.module';
 import { AuthService } from './auth/auth.service';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
+import { PG_POOL } from './database/database.constants';
+import { applyMigrations } from './database/migrate';
 
 function isAuthPath(url: string): boolean {
   const path = url.split('?')[0] ?? '';
@@ -46,6 +49,8 @@ async function bootstrap(): Promise<void> {
     }),
   );
   app.useGlobalFilters(new HttpExceptionFilter());
+
+  await applyMigrations(app.get<Pool>(PG_POOL));
 
   const port = config.get<number>('PORT', 3000);
   await app.listen(port, '0.0.0.0');

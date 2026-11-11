@@ -59,20 +59,20 @@ pnpm dev                          # server(3000) + web(5173) 동시 실행
 
 모두 리포지토리 루트에서 실행한다.
 
-| 명령                                                 | 설명                                                    |
-| ---------------------------------------------------- | ------------------------------------------------------- |
-| `pnpm dev` / `dev:server` / `dev:web`                | 개발 서버                                               |
-| `pnpm build`                                         | server → web 순서로 프로덕션 빌드                       |
-| `pnpm typecheck` / `typecheck:py`                    | tsc / mypy                                              |
-| `pnpm test` / `test:py`                              | jest / pytest                                           |
-| `pnpm lint` / `lint:fix` / `lint:py` / `lint:py:fix` | oxlint / ruff                                           |
-| `pnpm format` / `format:check` / `format:py`         | oxfmt / ruff format                                     |
-| `pnpm db:generate`                                   | 스키마 변경 → 마이그레이션 SQL 생성 (`server/drizzle/`) |
-| `pnpm db:migrate`                                    | 마이그레이션 적용                                       |
-| `pnpm db:push`                                       | 마이그레이션 없이 스키마 직접 반영 (로컬 전용)          |
-| `pnpm db:studio`                                     | Drizzle Studio                                          |
-| `pnpm docker:dev` / `docker:dev:down`                | 로컬 Postgres + Adminer                                 |
-| `pnpm docker:prod`                                   | Nest 이미지 빌드 + Postgres 와 함께 기동                |
+| 명령                                                 | 설명                                                     |
+| ---------------------------------------------------- | -------------------------------------------------------- |
+| `pnpm dev` / `dev:server` / `dev:web`                | 개발 서버                                                |
+| `pnpm build`                                         | server → web 순서로 프로덕션 빌드                        |
+| `pnpm typecheck` / `typecheck:py`                    | tsc / mypy                                               |
+| `pnpm test` / `test:py`                              | jest / pytest                                            |
+| `pnpm lint` / `lint:fix` / `lint:py` / `lint:py:fix` | oxlint / ruff                                            |
+| `pnpm format` / `format:check` / `format:py`         | oxfmt / ruff format                                      |
+| `pnpm db:generate`                                   | 스키마 변경 → 마이그레이션 SQL 생성 (`server/drizzle/`)  |
+| `pnpm db:migrate`                                    | 마이그레이션 적용. 서버 기동도 같은 SQL을 한 번 적용한다 |
+| `pnpm db:push`                                       | 마이그레이션 없이 스키마 직접 반영 (로컬 전용)           |
+| `pnpm db:studio`                                     | Drizzle Studio                                           |
+| `pnpm docker:dev` / `docker:dev:down`                | 로컬 Postgres + Adminer                                  |
+| `pnpm docker:prod`                                   | Nest 이미지 빌드 + Postgres 와 함께 기동                 |
 
 ## 코드 규칙
 
