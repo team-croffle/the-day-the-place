@@ -1,5 +1,5 @@
 import time
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 
 import httpx
 
@@ -44,6 +44,10 @@ class HttpClient:
         if delay > 0:
             self._sleep(delay)
         self._next_at = self._now() + self._min_interval
+
+    def add_cookies(self, cookies: Sequence[tuple[str, str, str, str]]) -> None:
+        for name, value, domain, path in cookies:
+            self._client.cookies.set(name, value, domain=domain, path=path)
 
     def get_text(self, url: str, headers: dict[str, str] | None = None) -> str:
         return self._send("GET", url, headers=headers).text

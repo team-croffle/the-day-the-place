@@ -5,6 +5,8 @@ WORKDIR /app
 
 COPY pyproject.toml uv.lock README.md ./
 COPY src ./src
-RUN uv sync --frozen --no-dev
+RUN uv sync --frozen --no-dev \
+ && uv run --frozen --no-dev playwright install-deps chromium \
+ && uv run --frozen --no-dev playwright install chromium
 
 CMD ["uv", "run", "--frozen", "--no-dev", "python", "-m", "collector"]

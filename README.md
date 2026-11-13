@@ -53,7 +53,7 @@ pnpm dev                          # server(3000) + web(5173) 동시 실행
 - Web: http://localhost:5173 (`/api` 는 vite proxy 로 server 에 전달)
 - Adminer: http://localhost:8080 (server: `postgres`, user/pass: `postgres`)
 
-수집기 계약과 실행은 [collector/README.md](collector/README.md)다.
+수집기 계약과 실행은 [collector/README.md](collector/README.md)다. Playwright Chromium은 뮤지엄뉴스 검사를 통과할 때만 쓰며, Modal 이미지가 설치한다.
 
 ## 자주 쓰는 명령
 

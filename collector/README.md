@@ -28,6 +28,7 @@ collector/
 │   ├── places.py
 │   ├── gemini.py
 │   ├── settings.py
+│   ├── museumnews_gate.py  # cupid.js 검사 쿠키
 │   ├── sources/          # 회원관 소식 HTML, 뮤지엄뉴스 글 번호 API
 │   └── extract/          # 제목 제외, 기간, 기관, 이미지
 └── tests/
@@ -93,7 +94,7 @@ pnpm test:py
 
 ### 2. 새 글만 연다
 
-회원관 소식은 KBoard 목록 `pageid`에서 `uid`를 읽고, 그 글의 HTML을 연다. 공지는 건너뛴다. 뮤지엄뉴스 목록 HTML에는 글 번호가 없어서, 같은 사이트의 `wp-json` 전시 카테고리로 번호와 주소를 읽는다. 그 응답이 JSON이 아니거나 글 목록을 거절하면 전시 카테고리 RSS의 `?p=` 번호로 읽는다. RSS도 글 목록이 아니면 전시 카테고리 HTML의 카드와 글 본문의 `postid-` 번호를 읽는다. 본문은 HTML을 연다. 그 번호보다 새로운 글과, 이전에 Gemini로 못 보낸 번호만 연다. 글 번호는 오름차순으로 처리한다. 작성일이 서울 오늘에서 365일보다 과거인 글은 열지 않고, 그 구간의 마지막 번호까지 커서를 올린다. 요청은 1초에 한 번보다 촘촘하지 않고, User-Agent는 `geunal-collector`이다.
+회원관 소식은 KBoard 목록 `pageid`에서 `uid`를 읽고, 그 글의 HTML을 연다. 공지는 건너뛴다. 뮤지엄뉴스 목록 HTML에는 글 번호가 없어서, 같은 사이트의 `wp-json` 전시 카테고리로 번호와 주소를 읽는다. 그 응답이 JSON이 아니거나 글 목록을 거절하면 전시 카테고리 RSS의 `?p=` 번호로 읽는다. RSS도 글 목록이 아니면 전시 카테고리 HTML의 카드와 글 본문의 `postid-` 번호를 읽는다. 목록이 `cupid.js`만 있는 검사 페이지면 Chromium으로 그 주소를 열고, 전시 카드가 나온 뒤의 쿠키로 다시 읽는다. 회원관 소식은 이 검사를 쓰지 않는다. 본문은 HTML을 연다. 그 번호보다 새로운 글과, 이전에 Gemini로 못 보낸 번호만 연다. 글 번호는 오름차순으로 처리한다. 작성일이 서울 오늘에서 365일보다 과거인 글은 열지 않고, 그 구간의 마지막 번호까지 커서를 올린다. 요청은 1초에 한 번보다 촘촘하지 않고, User-Agent는 `geunal-collector`이다.
 
 제목에 모집, 공고, 학술, 세미나, 상영, 교육, 워크숍, 성료, 발간이 있으면 그 글은 열지 않는다.
 
@@ -172,8 +173,9 @@ SCHEDULE = modal.Cron("0 3 * * *", timezone="Asia/Seoul")  # 매일 KST 03:00
 
 `modal.Period` 는 **재배포할 때마다 타이머가 리셋**되므로 일 단위 배치에는 `Cron` 을 쓴다.
 
-이미지는 `uv_sync(extra_options="--no-dev")` 로 `uv.lock` 을 그대로 재현하고, `add_local_python_source("collector")` 로 `src/collector`를 넣는다.
+이미지는 `uv_sync(extra_options="--no-dev")` 로 `uv.lock` 을 그대로 재현하고, Chromium을 설치한 뒤 `add_local_python_source("collector")` 로 `src/collector`를 넣는다.
 `uv_sync`는 워크스페이스 패키지를 설치하지 않아서, 소스를 빼면 컨테이너가 `collector`를 찾지 못한다.
+Chromium은 뮤지엄뉴스 `cupid.js` 검사를 통과할 때만 쓴다.
 의존성을 바꾸면 `uv lock` 을 다시 돌리고 커밋해야 배포 이미지가 따라온다.
 
 ### Modal 에서 미리 확인할 것
