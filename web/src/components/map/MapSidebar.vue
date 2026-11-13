@@ -153,11 +153,7 @@ onBeforeUnmount(() => {
         <button
           type="button"
           class="rounded-sm border px-2 py-2 text-sm font-medium"
-          :class="
-            kinds.site
-              ? 'text-paper border-[#6b4f2a] bg-[#6b4f2a]'
-              : 'border-line text-muted bg-white'
-          "
+          :class="kinds.site ? 'border-site bg-site text-ink' : 'border-line text-muted bg-white'"
           :aria-pressed="kinds.site"
           @click="toggleKind('site')"
         >

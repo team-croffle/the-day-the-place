@@ -7,9 +7,10 @@ import type { KakaoLatLng, KakaoMapInstance, KakaoMapsNamespace } from '@/types/
 
 const PIN_W = 24;
 const PIN_H = 32;
+/** 유적지 값은 `main.css`의 `--color-site`와 같다. */
 const COLORS: Record<PlaceKind, string> = {
   museum: '#1c1917',
-  site: '#6b4f2a',
+  site: '#d4924a',
 };
 
 const MAP_EVENTS = ['center_changed', 'idle'] as const;
