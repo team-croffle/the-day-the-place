@@ -8,6 +8,7 @@ dependencies = [
   "google-genai>=1.41.0",
   "httpx>=0.28.1",
   "modal>=1.1.0",
+  "playwright>=1.49",
   "pydantic-settings>=2.11.0",
   "selectolax>=0.3.34",
 ]
@@ -41,7 +42,7 @@ mypy_path = "src"
 packages = ["collector"]
 
 [[tool.mypy.overrides]]
-module = ["selectolax.*", "google.*", "google.genai.*", "modal.*"]
+module = ["selectolax.*", "google.*", "google.genai.*", "modal.*", "playwright.*"]
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]

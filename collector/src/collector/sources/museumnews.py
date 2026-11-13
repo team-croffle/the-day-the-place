@@ -11,6 +11,7 @@ from selectolax.lexbor import LexborHTMLParser
 from collector.extract.images import museumnews_image
 from collector.http import HttpClient, HttpStatusError
 from collector.models import Article, Listing
+from collector.museumnews_gate import pass_museumnews_gate
 from collector.textutil import html_to_text
 
 _API = "https://museumnews.kr/wp-json/wp/v2/posts"
@@ -39,6 +40,7 @@ class MuseumNewsSource:
         after_id: int,
         published_from: date,
     ) -> list[Listing]:
+        pass_museumnews_gate(client, _LIST)
         after = (published_from - timedelta(days=1)).isoformat() + "T00:00:00"
         found: list[Listing] = []
         for page in range(1, _MAX_PAGES + 1):

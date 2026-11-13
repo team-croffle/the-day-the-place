@@ -8,6 +8,10 @@ app = modal.App("geunal-collector")
 image = (
     modal.Image.debian_slim(python_version="3.13")
     .uv_sync(extra_options="--no-dev")
+    .run_commands(
+        "python -m playwright install-deps chromium",
+        "python -m playwright install chromium",
+    )
     .add_local_python_source("collector")
 )
 

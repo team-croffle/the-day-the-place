@@ -211,7 +211,7 @@ the-day-the-place/
 
 ## collector — 협회 글 배치
 
-구현은 `collector/`에 있다. `run()`이 한국박물관협회 회원관 소식과 뮤지엄뉴스 전시를 읽고, 추출한 전시만 서버 ingest로 보낸다. DB에 직접 붙지 않는다. 파일 구성은 `collector/README.md`가 정본이다.
+구현은 `collector/`에 있다. `run()`이 한국박물관협회 회원관 소식과 뮤지엄뉴스 전시를 읽고, 추출한 전시만 서버 ingest로 보낸다. DB에 직접 붙지 않는다. 파일 구성은 `collector/README.md`가 정본이다. 뮤지엄뉴스가 `cupid.js` 검사 페이지만 주면 `museumnews_gate.py`가 Chromium으로 쿠키를 받은 뒤 같은 클라이언트로 다시 읽는다.
 
 DB에 남는 수집 결과는 추출된 전시 행과 출처별 마지막 글 번호다. 글 원문, HTML, 전시정보(통합) 응답, 소장품 목록은 넣지 않는다. 옛 연합뉴스 코드는 `archive/yonhap-collector`에 있다.
 
