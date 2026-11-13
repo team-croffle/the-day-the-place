@@ -150,6 +150,7 @@
     "empty": "No exhibitions match.",
     "notFound": "Exhibition not found.",
     "source": "Read the article",
+    "noImage": "No image",
     "status": {
       "ongoing": "On view",
       "upcoming": "Upcoming"

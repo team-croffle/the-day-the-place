@@ -150,6 +150,7 @@
     "empty": "조건에 맞는 전시가 없습니다.",
     "notFound": "전시를 찾을 수 없습니다.",
     "source": "기사 보기",
+    "noImage": "이미지가 없습니다",
     "status": {
       "ongoing": "진행중",
       "upcoming": "예정"
