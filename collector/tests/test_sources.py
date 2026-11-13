@@ -1,9 +1,15 @@
 from datetime import date
+from json import JSONDecodeError
 
 from collector.extract.images import museum_or_image, museumnews_image
 from collector.models import Listing
 from collector.sources.museum_or import parse_museum_or_article, parse_museum_or_list
-from collector.sources.museumnews import parse_museumnews_article, parse_museumnews_post
+from collector.sources.museumnews import (
+    MuseumNewsSource,
+    parse_museumnews_article,
+    parse_museumnews_feed,
+    parse_museumnews_post,
+)
 
 _LIST = """
 <table id="kboard-default-list">
@@ -89,3 +95,51 @@ def test_museumnews_post_and_featured_image() -> None:
     assert article.image_url == "https://museumnews.kr/feature.jpg"
     og_only = "<meta property='og:image' content='https://museumnews.kr/only.jpg' />"
     assert museumnews_image(og_only, item.url) == "https://museumnews.kr/only.jpg"
+
+
+_FEED = """<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0"><channel>
+  <item>
+    <title>[국립스포츠박물관] 개관전</title>
+    <link>https://museumnews.kr/382ex01/</link>
+    <pubDate>Tue, 27 Oct 2026 15:30:00 +0000</pubDate>
+    <guid isPermaLink="false">https://museumnews.kr/?p=46477</guid>
+  </item>
+  <item>
+    <title>지난 전시</title>
+    <link>https://museumnews.kr/old/</link>
+    <pubDate>Mon, 01 Sep 2026 00:00:00 +0000</pubDate>
+    <guid isPermaLink="false">https://museumnews.kr/?p=100</guid>
+  </item>
+</channel></rss>
+"""
+
+
+class _FeedClient:
+    def get_json(self, url: str) -> object:
+        del url
+        raise JSONDecodeError("Expecting value", "", 0)
+
+    def get_text(self, url: str) -> str:
+        if "paged=1" in url:
+            return _FEED
+        return "<rss><channel></channel></rss>"
+
+
+def test_museumnews_feed_uses_seoul_date_and_post_id() -> None:
+    rows = parse_museumnews_feed(_FEED)
+
+    assert [(row.post_id, row.published_on.isoformat()) for row in rows] == [
+        (46477, "2026-10-28"),
+        (100, "2026-09-01"),
+    ]
+
+
+def test_museumnews_list_falls_back_to_feed_when_api_is_not_json() -> None:
+    found = MuseumNewsSource().list_new(
+        _FeedClient(),  # type: ignore[arg-type]
+        after_id=0,
+        published_from=date(2026, 10, 1),
+    )
+
+    assert [row.post_id for row in found] == [46477]
