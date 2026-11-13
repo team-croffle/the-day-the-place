@@ -10,7 +10,7 @@ const PIN_H = 32;
 /** 유적지 값은 `main.css`의 `--color-site`와 같다. */
 const COLORS: Record<PlaceKind, string> = {
   museum: '#1c1917',
-  site: '#d4924a',
+  site: '#a0713a',
 };
 
 const MAP_EVENTS = ['center_changed', 'idle'] as const;
