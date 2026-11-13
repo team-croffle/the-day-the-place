@@ -1,5 +1,5 @@
 import re
-from datetime import UTC, date, timedelta, timezone
+from datetime import UTC, date, datetime, timedelta, timezone
 from email.utils import parsedate_to_datetime
 from html import unescape
 from json import JSONDecodeError
@@ -15,16 +15,18 @@ from collector.textutil import html_to_text
 
 _API = "https://museumnews.kr/wp-json/wp/v2/posts"
 _FEED = "https://museumnews.kr/category/exhibition/feed/"
+_LIST = "https://museumnews.kr/category/exhibition/"
 _CATEGORY = "20"
 _PER_PAGE = 50
 _MAX_PAGES = 40
 _TAG = re.compile(r"<[^>]+>")
 _POST_ID = re.compile(r"[?&]p=(\d+)")
+_BODY_POST_ID = re.compile(r"postid-(\d+)")
 _SEOUL = timezone(timedelta(hours=9))
 
 
 class MuseumNewsSource:
-    """목록 HTML에는 글 번호가 없다. 같은 사이트의 글 목록 API로 번호를 읽고 본문은 HTML을 연다."""
+    """글 번호는 API, RSS, 전시 목록 HTML 순으로 읽고 본문은 HTML을 연다."""
 
     @property
     def name(self) -> Literal["museumnews"]:
@@ -111,7 +113,7 @@ def _list_from_feed(
         fresh = [row for row in rows if row.post_id not in seen]
         if not fresh:
             if page == 1:
-                raise RuntimeError("뮤지엄뉴스 피드를 읽지 못했다")
+                return _list_from_pages(client, after_id=after_id, published_from=published_from)
             break
         seen.update(row.post_id for row in fresh)
         found.extend(
@@ -120,6 +122,87 @@ def _list_from_feed(
         if any(row.published_on < published_from for row in fresh):
             break
     return found
+
+
+def parse_museumnews_cards(html: str) -> list[tuple[str, str, date]]:
+    """전시 카테고리 카드. 글 번호는 없고 제목, 주소, 서울 날짜만 있다."""
+    tree = LexborHTMLParser(html)
+    cards: list[tuple[str, str, date]] = []
+    for node in tree.css(".td_module_wrap"):
+        category = node.css_first("a.td-post-category")
+        category_href = category.attributes.get("href") if category is not None else ""
+        if "/category/exhibition/" not in (category_href or ""):
+            continue
+        link = node.css_first("h3.entry-title a")
+        time_node = node.css_first("time[datetime]")
+        if link is None or time_node is None:
+            continue
+        href = (link.attributes.get("href") or "").strip()
+        title = link.text(strip=True)
+        published = _card_date(time_node.attributes.get("datetime"))
+        if not href or not title or published is None:
+            continue
+        cards.append((title, href, published))
+    return cards
+
+
+def museumnews_post_id(html: str) -> int | None:
+    match = _BODY_POST_ID.search(html) or _POST_ID.search(html)
+    if match is None:
+        return None
+    return int(match.group(1))
+
+
+def _list_from_pages(
+    client: HttpClient,
+    *,
+    after_id: int,
+    published_from: date,
+) -> list[Listing]:
+    found: list[Listing] = []
+    seen: set[str] = set()
+    for page in range(1, _MAX_PAGES + 1):
+        url = _LIST if page == 1 else f"{_LIST}page/{page}/"
+        html = client.get_text(url)
+        cards = [card for card in parse_museumnews_cards(html) if card[1] not in seen]
+        if not cards:
+            if page == 1:
+                preview = " ".join(html.split())[:60]
+                raise RuntimeError(f"뮤지엄뉴스 목록을 읽지 못했다: {preview}")
+            break
+        seen.update(card[1] for card in cards)
+        stop = False
+        for title, href, published in cards:
+            if published < published_from:
+                stop = True
+                continue
+            post_id = museumnews_post_id(client.get_text(href))
+            if post_id is None or post_id <= after_id:
+                continue
+            found.append(
+                Listing(
+                    source="museumnews",
+                    post_id=post_id,
+                    title=title,
+                    url=href,
+                    published_on=published,
+                )
+            )
+        if stop:
+            break
+    return found
+
+
+def _card_date(raw: str | None) -> date | None:
+    if not raw:
+        return None
+    try:
+        parsed = datetime.fromisoformat(raw)
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=_SEOUL)
+    return parsed.astimezone(_SEOUL).date()
 
 
 def _seoul_date(raw: str | None) -> date | None:
