@@ -6,7 +6,9 @@ from collector.models import Listing
 from collector.sources.museum_or import parse_museum_or_article, parse_museum_or_list
 from collector.sources.museumnews import (
     MuseumNewsSource,
+    museumnews_post_id,
     parse_museumnews_article,
+    parse_museumnews_cards,
     parse_museumnews_feed,
     parse_museumnews_post,
 )
@@ -143,3 +145,55 @@ def test_museumnews_list_falls_back_to_feed_when_api_is_not_json() -> None:
     )
 
     assert [row.post_id for row in found] == [46477]
+
+
+_CARDS = """
+<div class="td_module_wrap">
+  <a class="td-post-category" href="https://museumnews.kr/category/post/">포스트</a>
+  <h3 class="entry-title"><a href="https://museumnews.kr/382post01/">다른 글</a></h3>
+  <time datetime="2026-10-27T16:44:51+09:00">2026-10-27</time>
+</div>
+<div class="td_module_wrap">
+  <a class="td-post-category" href="https://museumnews.kr/category/exhibition/">전시</a>
+  <h3 class="entry-title"><a href="https://museumnews.kr/382ex01/">개관전</a></h3>
+  <time datetime="2026-10-27T16:44:51+09:00">2026-10-27</time>
+</div>
+<div class="td_module_wrap">
+  <a class="td-post-category" href="https://museumnews.kr/category/exhibition/">전시</a>
+  <h3 class="entry-title"><a href="https://museumnews.kr/old/">지난 전시</a></h3>
+  <time datetime="2026-09-01T09:00:00+09:00">2026-09-01</time>
+</div>
+"""
+
+
+class _HtmlClient:
+    def get_json(self, url: str) -> object:
+        del url
+        raise JSONDecodeError("Expecting value", "", 0)
+
+    def get_text(self, url: str) -> str:
+        if "feed" in url:
+            return "<rss><channel></channel></rss>"
+        if url.endswith("/382ex01/"):
+            return '<body class="postid-46477"></body>'
+        if "/page/" in url:
+            return "<div></div>"
+        return _CARDS
+
+
+def test_museumnews_cards_keep_exhibition_category_only() -> None:
+    assert parse_museumnews_cards(_CARDS) == [
+        ("개관전", "https://museumnews.kr/382ex01/", date(2026, 10, 27)),
+        ("지난 전시", "https://museumnews.kr/old/", date(2026, 9, 1)),
+    ]
+    assert museumnews_post_id('<body class="postid-46477"></body>') == 46477
+
+
+def test_museumnews_list_reads_html_when_feed_has_no_posts() -> None:
+    found = MuseumNewsSource().list_new(
+        _HtmlClient(),  # type: ignore[arg-type]
+        after_id=0,
+        published_from=date(2026, 10, 1),
+    )
+
+    assert [(row.post_id, row.url) for row in found] == [(46477, "https://museumnews.kr/382ex01/")]
