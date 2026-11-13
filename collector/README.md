@@ -172,7 +172,8 @@ SCHEDULE = modal.Cron("0 3 * * *", timezone="Asia/Seoul")  # 매일 KST 03:00
 
 `modal.Period` 는 **재배포할 때마다 타이머가 리셋**되므로 일 단위 배치에는 `Cron` 을 쓴다.
 
-이미지는 `uv_sync(extra_options="--no-dev")` 로 `uv.lock` 을 그대로 재현한다.
+이미지는 `uv_sync(extra_options="--no-dev")` 로 `uv.lock` 을 그대로 재현하고, `add_local_python_source("collector")` 로 `src/collector`를 넣는다.
+`uv_sync`는 워크스페이스 패키지를 설치하지 않아서, 소스를 빼면 컨테이너가 `collector`를 찾지 못한다.
 의존성을 바꾸면 `uv lock` 을 다시 돌리고 커밋해야 배포 이미지가 따라온다.
 
 ### Modal 에서 미리 확인할 것
